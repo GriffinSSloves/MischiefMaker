@@ -17,6 +17,7 @@ MischiefMaker is a cross-platform steganography application for hiding secret me
 1. **Monorepo Structure**: Separate web/, mobile/, and core/ directories for platform-specific and shared code
 2. **TypeScript First**: All code written in TypeScript for type safety across platforms
 3. **Modern Tooling**: Latest stable versions of React, Vite, and TailwindCSS
+4. **Testing Strategy**: Vitest + React Testing Library for component and unit testing
 
 ## Future Architecture
 
@@ -36,3 +37,9 @@ Image Input -> Steganography -> Decryption -> Message Output
 - Native image libraries for mobile platforms
 - LSB (Least Significant Bit) manipulation for steganography
 - End-to-end encryption before embedding messages
+
+## Testing Strategy
+- **Unit Testing**: Vitest for fast, lightweight testing
+- **Component Testing**: React Testing Library for user-centric testing
+- **Integration Testing**: Planned for steganography workflows
+- **E2E Testing**: Planned for complete message encoding/decoding flows

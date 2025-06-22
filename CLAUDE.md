@@ -53,6 +53,10 @@ Project documentation is organized as follows:
 
 ## Development Commands
 
+**IMPORTANT**: Always return to the project root directory after running commands in subdirectories. Use `cd /Users/griffinsloves/dev/MischiefMaker` or equivalent to ensure you're in the correct working directory for subsequent operations.
+
+**TESTING**: Always run relevant tests after making code changes and before committing. Use `cd web && pnpm run test:run && cd ..` for web changes.
+
 ### Mobile Development
 ```bash
 # React Native commands
@@ -71,6 +75,12 @@ pnpm run dev          # Start development server
 pnpm run build        # Build for production
 pnpm run preview      # Preview production build
 pnpm run lint         # Run ESLint
+pnpm run test:run     # Run tests once
+pnpm run test         # Run tests in watch mode
+pnpm run test:ui      # Run tests with UI
+
+# Always return to root after subdirectory commands
+cd ..
 ```
 
 ### Shared Package Development

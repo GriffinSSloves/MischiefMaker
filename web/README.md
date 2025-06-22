@@ -39,4 +39,33 @@ pnpm run dev
 - `pnpm run dev` - Start development server
 - `pnpm run build` - Build for production
 - `pnpm run preview` - Preview production build locally
-- `pnpm run lint` - Run ESLint (once configured)
+- `pnpm run lint` - Run ESLint
+- `pnpm run test` - Run tests in watch mode
+- `pnpm run test:run` - Run tests once
+- `pnpm run test:ui` - Run tests with UI interface
+- `pnpm run coverage` - Run tests with coverage report
+
+## Testing
+
+This project uses **Vitest** for unit testing with React Testing Library for component testing.
+
+### Running Tests
+```bash
+# Run tests in watch mode (recommended during development)
+pnpm run test
+
+# Run tests once (useful for CI/CD)
+pnpm run test:run
+
+# Run tests with interactive UI
+pnpm run test:ui
+
+# Run tests with coverage report
+pnpm run coverage
+```
+
+### Writing Tests
+- Test files should be named `*.test.tsx` or `*.test.ts`
+- Place test files next to the components they test
+- Use React Testing Library for component testing
+- Jest-DOM matchers are available globally
