@@ -41,15 +41,17 @@ This is a monorepo structure designed to share core steganography and cryptograp
 - Shared validation and business logic
 - Common cryptographic functions
 
-### Security Requirements
-- End-to-end encryption before steganography
-- Secure key generation and management
-- No plaintext message storage
-- Secure deletion of temporary data
+## Documentation
+
+Project documentation is organized as follows:
+
+- **[Architecture](docs/architecture.md)** - System architecture and technical decisions
+- **[Decision Records](docs/decisions.md)** - Architecture Decision Records (ADRs)
+- **[Steganography](docs/steganography.md)** - Technical specifications for steganography implementation
+- **[Deployment](docs/deployment.md)** - Deployment guides and infrastructure setup
+- **Module READMEs** - Each folder (web/, mobile/, core/) contains specific setup documentation
 
 ## Development Commands
-
-Since this is a new repository, common commands will be established as the project grows. Typical patterns will include:
 
 ### Mobile Development
 ```bash
@@ -61,10 +63,14 @@ npm run test:mobile
 
 ### Web Development
 ```bash
-# Web app commands
-npm run dev:web
-npm run build:web
-npm run test:web
+# Navigate to web directory first
+cd web/
+
+# Web app commands (using pnpm)
+pnpm run dev          # Start development server
+pnpm run build        # Build for production
+pnpm run preview      # Preview production build
+pnpm run lint         # Run ESLint
 ```
 
 ### Shared Package Development
@@ -94,6 +100,8 @@ npm run test:crypto
 - Canvas API for image manipulation
 - File API for image upload/download
 - Web Workers for CPU-intensive steganography operations
+- **Current Status**: Basic React + TypeScript + Vite + TailwindCSS setup complete
+- **Pending**: ShadCN UI components, React Router, Prettier configuration
 
 ### Shared Core
 - Pure JavaScript/TypeScript functions

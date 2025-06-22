@@ -12,6 +12,7 @@ Web application for sending secret messages through pictures using steganography
 - **React Router Dom** - Client-side routing (pending setup)
 - **ESLint & Prettier** - Code linting and formatting (pending setup)
 - **pnpm** - Package manager
+- **Vitest** - Test Framework
 
 ## Getting Started
 
