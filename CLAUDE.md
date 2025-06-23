@@ -31,6 +31,8 @@ This is a monorepo structure designed to share core steganography and cryptograp
 
 **IMPORTANT**: Always follow current best practices and modern standards when implementing features or configuring tools (ESLint flat config, latest React patterns, modern TypeScript features, etc.).
 
+**DECISION TRACKING**: When making significant technical or architectural decisions, document them in [docs/decisions.md](docs/decisions.md) following the ADR (Architecture Decision Record) format.
+
 ### Steganography Implementation
 - LSB (Least Significant Bit) manipulation for image data
 - Support for PNG and JPEG formats
