@@ -17,17 +17,20 @@ Web application for sending secret messages through pictures using steganography
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js (v18 or higher)
 - pnpm package manager
 
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 pnpm install
 ```
 
 2. Start the development server:
+
 ```bash
 pnpm run dev
 ```
@@ -50,6 +53,7 @@ pnpm run dev
 This project uses **Vitest** for unit testing with React Testing Library for component testing.
 
 ### Running Tests
+
 ```bash
 # Run tests in watch mode (recommended during development)
 pnpm run test
@@ -65,6 +69,7 @@ pnpm run coverage
 ```
 
 ### Writing Tests
+
 - Test files should be named `*.test.tsx` or `*.test.ts`
 - Place test files next to the components they test
 - Use React Testing Library for component testing

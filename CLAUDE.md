@@ -29,6 +29,8 @@ This is a monorepo structure designed to share core steganography and cryptograp
 
 ## Key Technical Considerations
 
+**IMPORTANT**: Always follow current best practices and modern standards when implementing features or configuring tools (ESLint flat config, latest React patterns, modern TypeScript features, etc.).
+
 ### Steganography Implementation
 - LSB (Least Significant Bit) manipulation for image data
 - Support for PNG and JPEG formats
