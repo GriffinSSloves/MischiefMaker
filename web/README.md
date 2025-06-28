@@ -4,15 +4,19 @@ Web application for sending secret messages through pictures using steganography
 
 ## Tech Stack
 
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool and dev server
-- **TailwindCSS** - Utility-first CSS framework
-- **ShadCN UI** - Reusable component library (pending setup)
+- **React 19** - UI framework ✅
+- **TypeScript** - Type safety ✅
+- **Vite** - Build tool and dev server ✅
+- **TailwindCSS v4** - Utility-first CSS framework ✅
+- **ESLint & Prettier** - Code linting and formatting ✅
+- **pnpm** - Package manager ✅
+- **Vitest** - Test Framework ✅
+
+- **ShadCN UI** - Reusable component library ✅
+
+## Pending Setup
+
 - **React Router Dom** - Client-side routing (pending setup)
-- **ESLint & Prettier** - Code linting and formatting (pending setup)
-- **pnpm** - Package manager
-- **Vitest** - Test Framework
 
 ## Getting Started
 
@@ -43,10 +47,28 @@ pnpm run dev
 - `pnpm run build` - Build for production
 - `pnpm run preview` - Preview production build locally
 - `pnpm run lint` - Run ESLint
+- `pnpm run lint:fix` - Run ESLint with auto-fix
+- `pnpm run format` - Format code with Prettier
+- `pnpm run format:check` - Check code formatting
 - `pnpm run test` - Run tests in watch mode
 - `pnpm run test:run` - Run tests once
 - `pnpm run test:ui` - Run tests with UI interface
 - `pnpm run coverage` - Run tests with coverage report
+
+## Code Quality
+
+This project uses **ESLint** and **Prettier** for code quality and formatting.
+
+### ESLint Configuration
+
+- Uses ESLint flat config format (modern approach)
+- Comprehensive rules for TypeScript, React, React Hooks, and accessibility
+- See [eslint.config.js](eslint.config.js) for complete configuration
+
+### Prettier Configuration
+
+- Consistent code formatting with opinionated defaults
+- See [.prettierrc.json](.prettierrc.json) for complete configuration
 
 ## Testing
 

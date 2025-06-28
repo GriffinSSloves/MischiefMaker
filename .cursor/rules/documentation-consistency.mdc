@@ -1,0 +1,86 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Documentation Consistency Guide
+
+When reviewing or updating documentation, always validate consistency across ALL documentation files to ensure they are accurate, up-to-date, and don't conflict with each other.
+
+## Primary Documentation Files
+
+### Project-Level Documentation
+- [README.md](mdc:README.md) - Main project overview and quick start guide
+- [docs/architecture.md](mdc:docs/architecture.md) - System architecture and technical design
+- [docs/decisions.md](mdc:docs/decisions.md) - Architecture Decision Records (ADRs)
+- [docs/todos.md](mdc:docs/todos.md) - Current task list and priorities
+- [docs/completed.md](mdc:docs/completed.md) - History of completed development tasks
+- [docs/steganography.md](mdc:docs/steganography.md) - Core functionality specifications
+- [docs/deployment.md](mdc:docs/deployment.md) - Deployment and infrastructure guides
+
+### Module-Specific Documentation
+- [web/README.md](mdc:web/README.md) - Web application setup, tech stack, and development guide
+- [web/package.json](mdc:web/package.json) - Web dependencies and scripts
+- Mobile README (planned) - Mobile app documentation
+- Core README (planned) - Shared library documentation
+
+## Configuration Files (Documentation Sources)
+- [web/eslint.config.js](mdc:web/eslint.config.js) - ESLint configuration and rules
+- [web/.prettierrc.json](mdc:web/.prettierrc.json) - Code formatting configuration  
+- [web/tsconfig.json](mdc:web/tsconfig.json) - TypeScript configuration
+- [web/tailwind.config.js](mdc:web/tailwind.config.js) - TailwindCSS configuration
+- [web/vite.config.ts](mdc:web/vite.config.ts) - Vite build configuration
+
+## Documentation Consistency Checklist
+
+### When Updating Documentation:
+
+1. **Cross-Reference Validation**
+   - Ensure tech stack versions match between README.md, web/README.md, and package.json
+   - Verify architectural decisions in docs/decisions.md align with docs/architecture.md
+   - Check that todos.md reflects current project status
+   - Validate completed tasks are properly documented in completed.md
+   - Ensure completed tasks are removed from todos.md and added to completed.md
+   - Validate that all documentation links work and point to correct files
+
+2. **Version Consistency**
+   - Package versions in web/package.json should match versions mentioned in documentation
+   - Framework versions should be consistent across all documentation
+   - Configuration file settings should match what's described in READMEs
+
+3. **Status Accuracy**
+   - Mark completed items with ✅ in documentation
+   - Move completed todos from "pending" to "completed" sections
+   - Update project structure diagrams to reflect current state
+   - Ensure "coming soon" items are still accurate
+
+4. **Configuration Documentation**
+   - ESLint and Prettier settings should be documented in web/README.md
+   - Any configuration changes should be reflected in relevant documentation
+   - Script descriptions should match actual package.json scripts
+
+### Common Inconsistency Patterns to Watch For:
+
+- **Outdated dependency versions** - Check package.json vs documentation
+- **Missing completed features** - Features implemented but still marked as "pending"
+- **Incomplete task tracking** - Completed tasks not moved from todos.md to completed.md
+- **Broken internal links** - Documentation links that don't work
+- **Conflicting tech stack info** - Different versions mentioned in different files
+- **Stale ADRs** - Decision records that don't reflect current implementation
+- **Incomplete project structure** - File structure diagrams that don't match reality
+
+### Documentation Update Workflow:
+
+
+1. **Before making changes**: Review all related documentation files
+2. **During implementation**: Update relevant documentation simultaneously
+3. **After completion**: Validate all documentation is consistent and accurate
+4. **Regular maintenance**: Periodically audit all documentation for consistency
+
+## Quick Validation Commands
+
+When checking documentation consistency, consider running:
+- Check all internal links work
+- Verify package.json versions match documentation
+- Ensure all "pending setup" items are still accurate
+- Validate that configuration files match their documentation

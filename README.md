@@ -18,6 +18,8 @@ pnpm run dev
 
 - **[Architecture](docs/architecture.md)** - System design and technical architecture
 - **[Decision Records](docs/decisions.md)** - Key architectural and technology decisions
+- **[Current Tasks](docs/todos.md)** - Current task list and priorities
+- **[Completed Tasks](docs/completed.md)** - History of completed development tasks
 - **[Steganography](docs/steganography.md)** - Technical implementation details
 - **[Deployment](docs/deployment.md)** - Deployment and infrastructure guides
 
