@@ -23,6 +23,9 @@ pnpm run dev
 - **[Steganography](docs/steganography.md)** - Technical implementation details
 - **[Deployment](docs/deployment.md)** - Deployment and infrastructure guides
 
+### AI Collaboration
+- **[Cursor Rules](.cursor/rules/)** - Guidelines for AI assistants working on this project
+
 ### Module Documentation
 - **[Web App](web/README.md)** - React web application setup and development
 - **Mobile App** - React Native setup (coming soon)

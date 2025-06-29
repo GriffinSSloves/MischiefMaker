@@ -1,0 +1,99 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Rule Name: ai-collaboration-guidelines
+Description: 
+# AI Collaboration Guidelines for MischiefMaker
+
+These guidelines help AI assistants provide high-quality, consistent responses when working on the MischiefMaker project.
+
+## Core Principles
+
+### 1. Documentation Consistency First
+**ALWAYS validate documentation consistency across ALL files after any changes:**
+- Update `docs/completed.md` when tasks are finished
+- Move completed items from `docs/todos.md` to `docs/completed.md`
+- Update `docs/architecture.md` with architectural changes
+- Ensure version numbers match between package.json and documentation
+- Cross-reference all related documentation files for accuracy
+
+### 2. Modern Best Practices Only
+- Use latest stable versions and modern APIs (React Router v7 createBrowserRouter, ESLint flat config)
+- Prefer new patterns over legacy ones, even if both work
+- Document major technical decisions in `docs/decisions.md`
+- Always check package.json versions match documentation
+
+### 3. Code Organization Excellence
+- Follow separation of concerns (dedicated modules, shared utilities)
+- Apply DRY principle - create shared utilities for duplication
+- Use specific, descriptive naming (`renderWithRouter.tsx` vs `test-utils.tsx`)
+- Maintain co-located tests and feature-based organization
+
+## Testing Standards
+
+### 4. Modern Testing Patterns
+- Create tests for any utilities you build
+- Ensure consistent testing patterns across similar components
+- Update web/README.md with testing utility usage examples
+
+### 5. Quality Gates
+- Run tests after changes to ensure nothing breaks
+- Follow zero-warning ESLint policy - fix all warnings
+- Maintain comprehensive test coverage for new features
+- Think about maintainability and future extensibility
+
+## Communication Style
+
+### 6. Educational Explanations
+- Explain the "why" before the "how"
+- Provide context and reasoning for technical decisions
+- Show before/after comparisons for improvements
+- Discuss trade-offs and alternatives when relevant
+
+### 7. Incremental & Validated Approach
+- Build complex features step-by-step
+- Use parallel tool calls for efficiency when updating multiple files
+- Test frequently and validate assumptions
+- Ask clarifying questions rather than making assumptions
+
+## Project-Specific Guidelines
+
+### 8. MischiefMaker Context
+- **Tone**: Keep it fun and playful (per ADR-005) - tool for friends, not academic
+- **Architecture**: Follow monorepo structure (web/, mobile/, core/)
+
+### 9. Workflow Standards
+- **Pre-commit mindset**: Format, lint, type-check, build before considering done
+- **Documentation coverage**: Every feature should be documented
+- **Pattern consistency**: Check how similar things are implemented
+- **Future-proof thinking**: Will this be easy to modify/extend?
+
+## Response Structure Requirements
+
+### 10. Effective Communication
+- Plan out loud - explain what you'll do before doing it
+- Use parallel tool calls when operations can be simultaneous
+- Validate results and confirm tests pass
+- Summarize impact and explain why changes matter
+
+### 11. Success Criteria
+Every response should aim for:
+- ✅ All tests passing
+- ✅ Documentation consistent and up-to-date  
+- ✅ Code follows established patterns
+- ✅ Modern best practices implemented
+- ✅ Changes well-explained and justified
+
+## When in Doubt
+- Default to modern patterns over legacy approaches
+- Prefer explicit over implicit (clear naming, obvious intent)
+- Ask for clarification rather than making assumptions
+- Think about the next developer who will work on this code
+
+## Quick Reference Commands
+- Run tests: `cd web && npm test -- --run`
+- Check documentation consistency across: README.md, docs/architecture.md, docs/decisions.md, docs/todos.md, docs/completed.md, web/README.md
+- Lint: `cd web && npm run lint`
+- Format: `cd web && npm run format`
