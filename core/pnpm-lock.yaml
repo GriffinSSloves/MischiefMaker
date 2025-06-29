@@ -9,16 +9,16 @@ importers:
   .:
     devDependencies:
       '@eslint/js':
-        specifier: ^9.25.0
+        specifier: ^9.30.0
         version: 9.30.0
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.2
       '@typescript-eslint/eslint-plugin':
-        specifier: ^8.34.1
+        specifier: ^8.35.0
         version: 8.35.0(@typescript-eslint/parser@8.35.0(eslint@9.30.0)(typescript@5.8.3))(eslint@9.30.0)(typescript@5.8.3)
       '@typescript-eslint/parser':
-        specifier: ^8.34.1
+        specifier: ^8.35.0
         version: 8.35.0(eslint@9.30.0)(typescript@5.8.3)
       '@vitest/coverage-v8':
         specifier: ^2.0.0

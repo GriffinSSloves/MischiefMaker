@@ -8,7 +8,8 @@ This document tracks key architectural and technology decisions made during deve
 **Status**: Accepted
 **Context**: Need to choose web framework for the steganography application
 **Decision**: React 19 with TypeScript and Vite
-**Rationale**: 
+**Rationale**:
+
 - React 19 provides latest features and performance improvements
 - TypeScript ensures type safety across the application
 - Vite offers fast development experience and modern build tooling
@@ -21,6 +22,7 @@ This document tracks key architectural and technology decisions made during deve
 **Context**: Need consistent styling approach for web application
 **Decision**: TailwindCSS v4 with ShadCN UI components
 **Rationale**:
+
 - TailwindCSS provides utility-first approach for rapid development
 - ShadCN UI offers high-quality, accessible components
 - Good developer experience with consistent design system
@@ -33,6 +35,7 @@ This document tracks key architectural and technology decisions made during deve
 **Context**: Choose package manager for dependency management
 **Decision**: pnpm
 **Rationale**:
+
 - Faster installation than npm/yarn
 - Efficient disk space usage with content-addressable storage
 - Better security with strict dependency resolution
@@ -45,6 +48,7 @@ This document tracks key architectural and technology decisions made during deve
 **Context**: Need code quality, linting, and formatting tools for consistent development
 **Decision**: ESLint flat config + Prettier + Modern Best Practices Policy
 **Rationale**:
+
 - ESLint flat config (eslint.config.js) is the current standard format
 - Provides better file-specific targeting and more explicit configuration
 - Prettier ensures consistent code formatting across the team
@@ -59,6 +63,7 @@ This document tracks key architectural and technology decisions made during deve
 **Context**: Need to establish the tone and design direction for MischiefMaker
 **Decision**: Playful, casual, fun-focused approach prioritizing usability over education
 **Rationale**:
+
 - MischiefMaker is primarily a tool for fun and practical use
 - Users want to hide messages, not learn about steganography theory
 - Casual tone makes the app more approachable and enjoyable
@@ -66,6 +71,7 @@ This document tracks key architectural and technology decisions made during deve
 - Avoid overly technical or educational content that might intimidate users
 
 **Implementation Guidelines**:
+
 - Use playful, friendly language throughout the interface
 - Prioritize usability and simplicity over technical explanations
 - Keep content concise and action-oriented
@@ -74,9 +80,33 @@ This document tracks key architectural and technology decisions made during deve
 - **Minimal CSS approach**: Start with minimal Tailwind classes, add styling incrementally as needed
 - Focus on semantic HTML structure first, then enhance with necessary styles
 
+## ADR-006: Configuration Management Strategy
+
+**Date**: 2025-01-26
+**Status**: Accepted
+**Context**: Need to decide between shared configuration (monorepo workspace) vs. duplicated configuration for ESLint, Prettier, and other tooling across web and core packages
+**Decision**: Separate projects with duplicated dependencies and self-contained configurations
+**Rationale**:
+
+- **Simplicity over complexity**: Avoids monorepo workspace overhead and complexity
+- **Independent deployments**: Each package can be deployed and versioned independently
+- **Reduced coupling**: Projects don't depend on shared root-level configurations
+- **Easier troubleshooting**: Configuration issues are isolated to individual packages
+- **Platform-specific needs**: Web needs browser globals/React plugins, core needs platform-agnostic setup
+
+**Implementation**:
+
+- Each package has its own ESLint configuration with appropriate environment globals
+- Core: Platform-agnostic (only `console` global), TypeScript-only
+- Web: Browser globals (`document`, `window`, etc.), React/JSX support
+- Dependencies duplicated where needed (ESLint packages in both web/ and core/)
+- Shared Prettier configuration at root level (`.prettierrc.json`)
+- ShadCN UI components ignored in web linting (third-party code)
+
 ## Future Decisions
 
 Additional decisions will be documented here as the project evolves:
+
 - Core library architecture
 - Mobile platform choices
 - Deployment strategy
