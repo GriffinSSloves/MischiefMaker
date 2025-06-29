@@ -55,6 +55,30 @@ pnpm run dev
 - `pnpm run test:run` - Run tests once
 - `pnpm run test:ui` - Run tests with UI interface
 - `pnpm run coverage` - Run tests with coverage report
+- `pnpm run pre-commit` - Run all pre-commit checks (format, lint, type-check, build)
+
+## Development Workflow
+
+### Before Committing
+
+Always run the pre-commit checks to ensure code quality:
+
+```bash
+pnpm run pre-commit
+```
+
+This command will:
+
+- ✅ Check code formatting with Prettier
+- ✅ Lint code with ESLint (zero warnings policy)
+- ✅ Type-check with TypeScript
+- ✅ Build the project to catch any build errors
+
+If any step fails, fix the issues before committing. For formatting issues, run:
+
+```bash
+pnpm run format
+```
 
 ## Code Quality
 
@@ -94,6 +118,26 @@ pnpm run coverage
 ### Writing Tests
 
 - Test files should be named `*.test.tsx` or `*.test.ts`
-- Place test files next to the components they test
+- Tests are co-located with their code using folder-based organization
 - Use React Testing Library for component testing
 - Jest-DOM matchers are available globally
+
+#### Test Organization
+
+Tests are organized using a folder-based approach where each component, page, hook, or utility gets its own folder containing both the implementation and test:
+
+```
+src/
+├── components/
+│   ├── Layout/
+│   │   ├── Layout.tsx
+│   │   └── Layout.test.tsx
+├── pages/
+│   ├── Home/
+│   │   ├── Home.tsx
+│   │   └── Home.test.tsx
+├── hooks/
+│   ├── useExampleHook/
+│   │   ├── useExampleHook.ts
+│   │   └── useExampleHook.ts
+```

@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
-import Home from './pages/Home';
-import Encode from './pages/Encode';
-import Decode from './pages/Decode';
+import Layout from './components/Layout/Layout';
+import Home from './pages/Home/Home';
+import Encode from './pages/Encode/Encode';
+import Decode from './pages/Decode/Decode';
 import './App.css';
 
 function App() {

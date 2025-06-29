@@ -43,3 +43,27 @@ Image Input -> Steganography -> Decryption -> Message Output
 - **Component Testing**: React Testing Library for user-centric testing
 - **Integration Testing**: Planned for steganography workflows
 - **E2E Testing**: Planned for complete message encoding/decoding flows
+
+### Test Co-location Strategy
+Tests are co-located with their corresponding code using folder-based organization:
+
+```
+src/
+├── components/
+│   ├── Layout/
+│   │   ├── Layout.tsx
+│   │   └── Layout.test.tsx
+│   └── ui/           # ShadCN components (no tests)
+├── pages/
+│   ├── Home/
+│   │   ├── Home.tsx
+│   │   └── Home.test.tsx
+├── hooks/
+│   ├── useExampleHook/
+│   │   ├── useExampleHook.ts
+│   │   └── useExampleHook.ts
+└── lib/
+    ├── exampleUtil/
+    │   ├── exampleUtil.ts
+    │   └── exampleUtil.test.ts
+```
