@@ -19,6 +19,35 @@ Web application for sending secret messages through pictures using steganography
 
 _All core web setup is now complete! Ready for steganography feature development._
 
+## Project Structure
+
+```
+src/
+├── assets/                 # Static assets
+│   └── images/            # Image files (logos, icons, etc.)
+├── components/            # React components organized by type
+│   ├── app/              # App-specific components
+│   ├── common/           # Reusable common components
+│   ├── custom/           # Custom components specific to this app
+│   ├── layouts/          # Layout components (headers, footers, etc.)
+│   └── ui/               # UI library components (ShadCN UI)
+├── constants/            # Application constants and configuration
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility libraries and configurations
+├── pages/                # Page components for routing
+│   ├── Home/           # Home page component and tests
+│   ├── Encode/         # Encode page component and tests
+│   └── Decode/         # Decode page component and tests
+└── test/                 # Test utilities and setup files
+```
+
+### Folder Organization Principles
+
+- **Co-location**: Tests are placed alongside their corresponding components
+- **Feature-based**: Components are organized by feature/type rather than file type
+- **Reusability**: Common components are separated from app-specific ones
+- **Scalability**: Structure supports growth as the application expands
+
 ## Getting Started
 
 ### Prerequisites
@@ -121,6 +150,23 @@ pnpm run coverage
 - Tests are co-located with their code using folder-based organization
 - Use React Testing Library for component testing
 - Jest-DOM matchers are available globally
+
+#### Router Testing Utilities
+
+For components that use React Router, use the shared router utilities in `src/test/renderWithRouter.tsx`:
+
+```typescript
+import { renderWithRouterHelpers } from '../test/renderWithRouter';
+
+// Route-specific helpers
+renderWithRouterHelpers.home(<HomeComponent />);       // renders at '/'
+renderWithRouterHelpers.encode(<EncodeComponent />);   // renders at '/encode'
+renderWithRouterHelpers.decode(<DecodeComponent />);   // renders at '/decode'
+
+// Or use the flexible renderWithRouter function
+import { renderWithRouter } from '../test/renderWithRouter';
+renderWithRouter(<Component />, { route: '/custom-path' });
+```
 
 #### Test Organization
 

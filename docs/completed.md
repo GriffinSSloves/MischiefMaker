@@ -54,6 +54,41 @@ This document tracks tasks that have been completed during the MischiefMaker pro
 
 ---
 
+## 2025-01-27
+
+### ✅ Modern Router Architecture Implementation  
+**Task**: Move router code from App.tsx to dedicated router module with modern React Router patterns and comprehensive testing
+
+**Status**: **COMPLETED** ✅
+
+**Summary**: Implemented modern router architecture using createBrowserRouter with advanced patterns:
+
+- **Router Extraction**: Moved routing logic from `App.tsx` to `lib/router/router.tsx` for better separation of concerns
+- **Modern React Router**: Migrated from `BrowserRouter` to `createBrowserRouter` (recommended approach)
+- **Code Splitting**: Implemented lazy loading for all page components to reduce initial bundle size
+- **Nested Routes**: Used proper nested route structure with `Outlet` for layout management
+- **Loading States**: Added consistent loading UI for lazy-loaded components
+- **Comprehensive Testing**: Created `router.test.tsx` with full test coverage for routing behavior
+- **Path Aliases Fix**: Configured Vite path aliases (`@/`) to match TypeScript configuration
+- **ESLint Modernization**: Updated lint scripts to remove deprecated `--ext` flags for ESLint v9
+
+**Outcome**: 
+- Clean, scalable router architecture following React Router v7 best practices
+- All tests passing (7 tests including route navigation, loading states, and structure validation)
+- Improved developer experience with working `@/` imports
+- Foundation ready for future route additions and features
+- Modern tooling configuration aligned with current standards
+
+**Files Modified**:
+- `web/src/lib/router/router.tsx` - New modern router implementation with lazy loading
+- `web/src/lib/router/router.test.tsx` - Comprehensive router tests
+- `web/src/App.tsx` - Simplified to use RouterProvider
+- `web/vite.config.ts` - Added path alias configuration
+- `web/package.json` - Updated ESLint scripts
+- `web/README.md` - Updated project structure documentation
+
+---
+
 ## Template for Future Entries
 
 ```markdown

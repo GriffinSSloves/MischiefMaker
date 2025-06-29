@@ -9,15 +9,25 @@ MischiefMaker is a cross-platform steganography application for hiding secret me
 ### Web Application
 - **Framework**: React 19 with TypeScript
 - **Build Tool**: Vite 6.3.5
+- **Routing**: React Router v7 with createBrowserRouter (modern architecture)
 - **Styling**: TailwindCSS v4 with PostCSS
 - **Package Manager**: pnpm
-- **Status**: Basic foundation complete
+- **Status**: Complete foundation with modern router architecture
 
 ### Key Architectural Decisions
 1. **Monorepo Structure**: Separate web/, mobile/, and core/ directories for platform-specific and shared code
 2. **TypeScript First**: All code written in TypeScript for type safety across platforms
 3. **Modern Tooling**: Latest stable versions of React, Vite, and TailwindCSS
-4. **Testing Strategy**: Vitest + React Testing Library for component and unit testing
+4. **Modern Router Architecture**: React Router v7 with createBrowserRouter, lazy loading, and nested routes
+5. **Testing Strategy**: Vitest + React Testing Library for component and unit testing
+
+### Router Architecture
+The web application uses a modern router architecture with:
+- **createBrowserRouter**: Latest React Router v7 API for better performance and features
+- **Lazy Loading**: Code splitting for all page components to reduce initial bundle size
+- **Nested Routes**: Clean layout management with Outlet pattern
+- **Path Aliases**: Vite configured with `@/` aliases for clean imports
+- **Comprehensive Testing**: Full test coverage for routing behavior and navigation
 
 ## Future Architecture
 

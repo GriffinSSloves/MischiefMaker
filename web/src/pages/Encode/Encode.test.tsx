@@ -1,25 +1,20 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+import { renderWithRouterHelpers } from '../../test/renderWithRouter';
 import Encode from './Encode';
-
-const renderWithRouter = (component: React.ReactElement) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>);
-};
 
 describe('Encode', () => {
   it('renders without crashing', () => {
-    renderWithRouter(<Encode />);
+    renderWithRouterHelpers.encode(<Encode />);
   });
 
   it('displays the main heading', () => {
-    renderWithRouter(<Encode />);
+    renderWithRouterHelpers.encode(<Encode />);
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
   });
 
   it('contains the encode form or interface elements', () => {
-    renderWithRouter(<Encode />);
+    renderWithRouterHelpers.encode(<Encode />);
     // This test will need to be updated when the actual encode interface is implemented
     expect(screen.getByText(/encode/i)).toBeInTheDocument();
   });
