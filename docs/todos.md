@@ -9,6 +9,7 @@
 ### Core Library
 * Design and implement the core steganography algorithms
 * Set up shared utilities for image processing and cryptography
+* This needs to be a platform agnostic repo, not a Node.js one. 
 
 * Create cross-platform compatible APIs
 
