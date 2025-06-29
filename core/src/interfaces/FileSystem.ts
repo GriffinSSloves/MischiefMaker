@@ -7,12 +7,12 @@ export interface FileSystem {
    * Read file as ArrayBuffer
    */
   readFile(path: string): Promise<ArrayBuffer>;
-  
+
   /**
    * Write ArrayBuffer to file
    */
   writeFile(path: string, data: ArrayBuffer): Promise<void>;
-  
+
   /**
    * Check if file exists
    */

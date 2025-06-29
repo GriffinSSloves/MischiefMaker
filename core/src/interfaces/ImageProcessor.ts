@@ -7,17 +7,17 @@ export interface ImageProcessor {
    * Load an image from buffer data
    */
   loadImage(buffer: ArrayBuffer): Promise<ImageData>;
-  
+
   /**
    * Get pixel data from image
    */
   getPixelData(imageData: ImageData): Promise<Uint8ClampedArray>;
-  
+
   /**
    * Set pixel data to image
    */
   setPixelData(imageData: ImageData, pixelData: Uint8ClampedArray): Promise<ImageData>;
-  
+
   /**
    * Convert image to buffer in specified format
    */
@@ -36,4 +36,4 @@ export interface ImageData {
   width: number;
   height: number;
   data: Uint8ClampedArray;
-} 
+}

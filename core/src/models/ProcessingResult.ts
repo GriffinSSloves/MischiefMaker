@@ -4,10 +4,10 @@
 export interface EncodeResult {
   /** Operation success status */
   success: boolean;
-  
+
   /** Resulting image data with embedded message */
   imageData?: ArrayBuffer;
-  
+
   /** Error message if operation failed */
   error?: string;
 }
@@ -18,10 +18,10 @@ export interface EncodeResult {
 export interface DecodeResult {
   /** Operation success status */
   success: boolean;
-  
+
   /** Decoded message */
   message?: string;
-  
+
   /** Error message if operation failed */
   error?: string;
-} 
+}

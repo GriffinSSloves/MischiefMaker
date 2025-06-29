@@ -10,4 +10,4 @@ export type { EncodeResult, DecodeResult } from './models/ProcessingResult';
 export { SteganographyError, ErrorCodes } from './errors/SteganographyError';
 
 // Services (to be implemented)
-// export { SteganographyService } from './services/SteganographyService'; 
+// export { SteganographyService } from './services/SteganographyService';

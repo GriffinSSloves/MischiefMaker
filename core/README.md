@@ -70,8 +70,15 @@ npm run build
 - `npm run dev` - Build in watch mode
 - `npm run test` - Run tests in watch mode
 - `npm run test:run` - Run tests once
+- `npm run test:ui` - Run tests with UI interface
+- `npm run coverage` - Run tests with coverage report
 - `npm run lint` - Run ESLint
+- `npm run lint:fix` - Run ESLint with auto-fix
+- `npm run format` - Format code with Prettier
+- `npm run format:check` - Check code formatting
+- `npm run type-check` - Run TypeScript type checking
 - `npm run clean` - Clean build artifacts
+- `npm run pre-commit` - Run all pre-commit checks (format, lint, type-check, build)
 
 ## Usage Example
 
@@ -81,32 +88,36 @@ import { SteganographyService } from '@mischiefmaker/core';
 // Platform-specific implementations injected at runtime
 const steganographyService = new SteganographyService({
   imageProcessor: webImageProcessor, // or mobileImageProcessor
-  fileSystem: webFileSystem
+  fileSystem: webFileSystem,
 });
 
 // Encode a message
 const result = await steganographyService.encode({
-  message: "Secret message",
+  message: 'Secret message',
   imageData: inputImageBuffer,
-  format: "png"
+  format: 'png',
 });
 
 // Decode a message
 const decoded = await steganographyService.decode({
-  imageData: steganographicImageBuffer
+  imageData: steganographicImageBuffer,
 });
 ```
 
 ## Core Interfaces
 
 ### ImageProcessor Interface
+
 Minimal interface for image manipulation operations:
+
 - Load images from buffers
 - Access and modify pixel data
 - Convert images back to buffers
 
 ### FileSystem Interface
+
 Basic file operations:
+
 - Read/write files
 - File existence checks
 
@@ -119,9 +130,38 @@ Basic file operations:
 
 This module is designed to be consumed by the web and mobile applications. Platform-specific implementations should provide concrete implementations of the core interfaces.
 
+## Development Workflow
+
+### Before Committing
+
+Always run the pre-commit checks to ensure code quality:
+
+```bash
+npm run pre-commit
+```
+
+This command will:
+
+- ✅ Check code formatting with Prettier
+- ✅ Lint code with ESLint
+- ✅ Type-check with TypeScript
+- ✅ Build the project to catch any build errors
+
+If any step fails, fix the issues before committing. For formatting issues, run:
+
+```bash
+npm run format
+```
+
+## Code Quality
+
+This project uses **ESLint** and **Prettier** for code quality and formatting, matching the web app configuration.
+
 ## Testing
 
-Run tests to ensure everything works correctly:
+This project uses **Vitest** for unit testing with comprehensive coverage reporting.
+
+### Running Tests
 
 ```bash
 # Run tests in watch mode (recommended during development)
@@ -129,4 +169,10 @@ npm run test
 
 # Run tests once (useful for CI/CD)
 npm run test:run
-``` 
+
+# Run tests with interactive UI
+npm run test:ui
+
+# Run tests with coverage report
+npm run coverage
+```
