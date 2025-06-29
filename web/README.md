@@ -13,10 +13,11 @@ Web application for sending secret messages through pictures using steganography
 - **Vitest** - Test Framework ✅
 
 - **ShadCN UI** - Reusable component library ✅
+- **React Router Dom** - Client-side routing ✅
 
 ## Pending Setup
 
-- **React Router Dom** - Client-side routing (pending setup)
+_All core web setup is now complete! Ready for steganography feature development._
 
 ## Getting Started
 

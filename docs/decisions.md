@@ -52,6 +52,28 @@ This document tracks key architectural and technology decisions made during deve
 - Policy to always use current best practices and modern standards for all tooling and implementation decisions
 - Helps maintain code quality and reduces technical debt
 
+## ADR-005: Application Tone and Design Direction
+
+**Date**: 2025-01-26
+**Status**: Accepted
+**Context**: Need to establish the tone and design direction for MischiefMaker
+**Decision**: Playful, casual, fun-focused approach prioritizing usability over education
+**Rationale**:
+- MischiefMaker is primarily a tool for fun and practical use
+- Users want to hide messages, not learn about steganography theory
+- Casual tone makes the app more approachable and enjoyable
+- Focus should be on ease of use and delightful user experience
+- Avoid overly technical or educational content that might intimidate users
+
+**Implementation Guidelines**:
+- Use playful, friendly language throughout the interface
+- Prioritize usability and simplicity over technical explanations
+- Keep content concise and action-oriented
+- Use emojis and visual elements to enhance the fun factor
+- Avoid academic or overly formal tone
+- **Minimal CSS approach**: Start with minimal Tailwind classes, add styling incrementally as needed
+- Focus on semantic HTML structure first, then enhance with necessary styles
+
 ## Future Decisions
 
 Additional decisions will be documented here as the project evolves:
