@@ -1,0 +1,26 @@
+# Build artifacts
+**/dist/**
+**/build/**
+**/coverage/**
+
+# Lock files
+pnpm-lock.yaml
+**/pnpm-lock.yaml
+package-lock.json
+**/package-lock.json
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment and config
+.env*
+.DS_Store
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/ 

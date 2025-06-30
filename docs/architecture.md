@@ -6,6 +6,14 @@ MischiefMaker is a cross-platform steganography application for hiding secret me
 
 ## Current Architecture
 
+### Key Architectural Decisions
+
+1. **Monorepo Structure**: Separate web/, mobile/, and core/ directories with pnpm workspace management for cross-package dependencies
+2. **TypeScript First**: All code written in TypeScript for type safety across platforms
+3. **Modern Tooling**: Latest stable versions of React, Vite, and TailwindCSS
+4. **Modern Router Architecture**: React Router v7 with createBrowserRouter, lazy loading, and nested routes
+5. **Testing Strategy**: Vitest + React Testing Library for component and unit testing
+
 ### Web Application
 
 - **Framework**: React 19 with TypeScript
@@ -14,14 +22,6 @@ MischiefMaker is a cross-platform steganography application for hiding secret me
 - **Styling**: TailwindCSS v4 with PostCSS
 - **Package Manager**: pnpm
 - **Status**: Complete foundation with modern router architecture
-
-### Key Architectural Decisions
-
-1. **Monorepo Structure**: Separate web/, mobile/, and core/ directories for platform-specific and shared code
-2. **TypeScript First**: All code written in TypeScript for type safety across platforms
-3. **Modern Tooling**: Latest stable versions of React, Vite, and TailwindCSS
-4. **Modern Router Architecture**: React Router v7 with createBrowserRouter, lazy loading, and nested routes
-5. **Testing Strategy**: Vitest + React Testing Library for component and unit testing
 
 ### Router Architecture
 
@@ -41,19 +41,9 @@ The web application uses a modern router architecture with:
 - **Mobile App**: React Native for iOS and Android
 - **Web App**: Browser-based application with Canvas API for image processing
 
-### Data Flow
-
-```
-User Input -> Encryption -> Steganography -> Image Output
-Image Input -> Steganography -> Decryption -> Message Output
-```
-
 ## Technical Considerations
 
-- Canvas API for web image manipulation
-- Native image libraries for mobile platforms
 - LSB (Least Significant Bit) manipulation for steganography
-- End-to-end encryption before embedding messages
 
 ## Testing Strategy
 
@@ -89,16 +79,18 @@ src/
 
 ## Configuration Standards
 
-### Shared Configurations
+### Monorepo Shared Configurations
 
-To ensure consistency across the monorepo, configuration files should be as similar as possible:
+The project uses pnpm workspaces for dependency management and shared configurations where appropriate.
 
-#### ✅ **Shared Across All Packages:**
+#### **Shared Configurations:**
 
-- **Prettier**: All packages use the root `.prettierrc.json` for identical code formatting
-- **Core ESLint rules**: Similar TypeScript and JavaScript quality standards (duplicated but consistent)
+- **Prettier**: Root `.prettierrc.json` used by all packages for consistent formatting
+- **ESLint**: Shared base configuration in `eslint.config.base.js` extended by platform-specific configs
+- **Dependencies**: ESLint, Prettier, and TypeScript dependencies managed at the root level
+- **Workspace**: pnpm workspace for automatic cross-package linking during development
 
-#### ⚙️ **Platform-Specific Configurations:**
+#### **Platform-Specific Differences:**
 
 - **Environment globals**:
   - Web: `document`, `window`, `navigator`, `localStorage`, etc. (browser APIs)
@@ -116,17 +108,23 @@ To ensure consistency across the monorepo, configuration files should be as simi
 ### Configuration Management Strategy
 
 ```
-├── .prettierrc.json              # Shared Prettier config (used by all packages)
+├── .prettierrc.json              # Shared Prettier config for all packages
 ├── .prettierignore               # Shared ignore patterns
+├── eslint.config.base.js         # Shared ESLint base configuration
+├── pnpm-workspace.yaml           # Workspace configuration
+├── package.json                  # Root dependencies and global scripts
 ├── web/
-│   └── eslint.config.js          # Self-contained: React + browser globals + TypeScript
+│   ├── eslint.config.js          # Extends base + React/browser-specific rules
+│   └── package.json              # Web dependencies + "@mischiefmaker/core": "workspace:*"
 ├── core/
-│   └── eslint.config.js          # Self-contained: Platform-agnostic + TypeScript only
+│   ├── eslint.config.js          # Extends base + platform-agnostic rules
+│   └── package.json              # Core package configuration
 └── mobile/                       # Future
-    └── eslint.config.js          # Self-contained: React Native + RN globals + TypeScript
+    ├── eslint.config.js          # Extends base + React Native-specific rules
+    └── package.json              # Mobile dependencies + core workspace link
 ```
 
-**Decision**: We chose **separate projects with duplicated dependencies** over a shared monorepo workspace for simplicity and reduced coupling. Each package maintains its own ESLint configuration appropriate for its environment.
+**Decision**: We chose **monorepo with pnpm workspaces** to enable seamless cross-package development while sharing configuration where it makes sense. This provides automatic linking of the core library to web/mobile packages during development with hot reloading support.
 
 ### Core Library Platform-Agnostic Design
 

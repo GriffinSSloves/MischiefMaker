@@ -1,76 +1,64 @@
-import js from '@eslint/js';
-import typescript from '@typescript-eslint/eslint-plugin';
-import typescriptParser from '@typescript-eslint/parser';
+import {
+  sharedIgnores,
+  baseJSConfig,
+  baseTSConfig,
+  globalRulesConfig,
+  testFilesConfig,
+  prettierConfig,
+} from '../eslint.config.base.js';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
-import prettier from 'eslint-config-prettier';
 
 export default [
+  // Shared ignore patterns with web-specific additions
   {
+    ...sharedIgnores,
     ignores: [
-      'dist/**',
-      'build/**',
-      'node_modules/**',
-      'coverage/**',
-      '.git/**',
-      'public/**',
-      '.prettierrc*',
-      'package.json',
-      'package-lock.json',
-      'pnpm-lock.yaml',
-      '*.log',
-      '.DS_Store',
+      ...sharedIgnores.ignores,
+      'public/**', // Web-specific ignore
+      'src/components/ui/**', // ShadCN UI components (third-party)
     ],
   },
 
-  // Base ESLint config with browser environment
+  // Base JavaScript config with browser-specific globals
   {
-    ...js.configs.recommended,
+    ...baseJSConfig,
     languageOptions: {
+      ...baseJSConfig.languageOptions,
       globals: {
+        ...baseJSConfig.languageOptions.globals,
+        // Browser-specific globals
         document: 'readonly',
         window: 'readonly',
         navigator: 'readonly',
         history: 'readonly',
         location: 'readonly',
-        console: 'readonly',
-      },
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        fetch: 'readonly',
       },
     },
   },
 
-  // Prettier config to disable conflicting rules
-  prettier,
+  prettierConfig,
 
-  // TypeScript config
+  // TypeScript config for web with JSX support
   {
+    ...baseTSConfig,
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
-      parser: typescriptParser,
+      ...baseTSConfig.languageOptions,
       parserOptions: {
-        project: './tsconfig.json',
+        ...baseTSConfig.languageOptions.parserOptions,
         ecmaFeatures: {
           jsx: true,
         },
       },
     },
-    plugins: {
-      '@typescript-eslint': typescript,
-    },
-    rules: {
-      ...typescript.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
   },
 
-  // React config
+  // React configuration
   {
     files: ['**/*.jsx', '**/*.tsx'],
     languageOptions: {
@@ -89,8 +77,8 @@ export default [
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       ...jsxA11y.configs.recommended.rules,
-      'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'off',
+      'react/react-in-jsx-scope': 'off', // Not needed in React 17+
+      'react/prop-types': 'off', // Using TypeScript for prop validation
     },
     settings: {
       react: {
@@ -99,14 +87,15 @@ export default [
     },
   },
 
-  // Global rules for all JS/TS files
+  // Global rules for web files
   {
+    ...globalRulesConfig,
     files: ['**/*.{js,jsx,ts,tsx}'],
-    rules: {
-      'no-unused-vars': 'off', // Handled by TypeScript rule
-      'no-console': 'warn',
-      'prefer-const': 'error',
-      'no-var': 'error',
-    },
+  },
+
+  // Test file overrides
+  {
+    ...testFilesConfig,
+    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
   },
 ];

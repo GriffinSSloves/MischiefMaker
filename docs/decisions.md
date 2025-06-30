@@ -39,7 +39,7 @@ This document tracks key architectural and technology decisions made during deve
 - Faster installation than npm/yarn
 - Efficient disk space usage with content-addressable storage
 - Better security with strict dependency resolution
-- Good monorepo support for future expansion
+- Excellent workspace support for monorepo management
 
 ## ADR-004: Code Quality Tools and Modern Best Practices
 
@@ -85,22 +85,23 @@ This document tracks key architectural and technology decisions made during deve
 **Date**: 2025-01-26
 **Status**: Accepted
 **Context**: Need to decide between shared configuration (monorepo workspace) vs. duplicated configuration for ESLint, Prettier, and other tooling across web and core packages
-**Decision**: Separate projects with duplicated dependencies and self-contained configurations
+**Decision**: Monorepo with pnpm workspaces and shared configurations where appropriate
 **Rationale**:
 
-- **Simplicity over complexity**: Avoids monorepo workspace overhead and complexity
-- **Independent deployments**: Each package can be deployed and versioned independently
-- **Reduced coupling**: Projects don't depend on shared root-level configurations
-- **Easier troubleshooting**: Configuration issues are isolated to individual packages
-- **Platform-specific needs**: Web needs browser globals/React plugins, core needs platform-agnostic setup
+- **Cross-package development**: Seamless consumption of core library in web/mobile packages
+- **Hot reloading**: Changes to core instantly reflected in consuming packages during development
+- **Shared configuration**: Reduce duplication while maintaining platform-specific customization
+- **Simplified dependency management**: Workspace linking eliminates manual build/publish cycles
+- **Consistent tooling**: Shared ESLint/Prettier base with platform-specific extensions
 
 **Implementation**:
 
-- Each package has its own ESLint configuration with appropriate environment globals
-- Core: Platform-agnostic (only `console` global), TypeScript-only
-- Web: Browser globals (`document`, `window`, etc.), React/JSX support
-- Dependencies duplicated where needed (ESLint packages in both web/ and core/)
-- Shared Prettier configuration at root level (`.prettierrc.json`)
+- Shared base ESLint configuration (`eslint.config.base.js`) extended by platform-specific configs
+- Shared Prettier configuration (`.prettierrc.json`) at root level used by all packages
+- Core dependencies (ESLint, Prettier, TypeScript tools) managed at workspace root
+- Core: Platform-agnostic globals, extends base config with TypeScript-only rules
+- Web: Browser globals + React/JSX support, extends base config with React-specific rules
+- Workspace dependencies: `"@mischiefmaker/core": "workspace:*"` for automatic linking
 - ShadCN UI components ignored in web linting (third-party code)
 
 ## Future Decisions

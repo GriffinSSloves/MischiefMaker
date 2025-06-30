@@ -5,6 +5,7 @@ A cross-platform steganography application for hiding secret messages in images.
 ## Quick Start
 
 ### Web Application
+
 ```bash
 cd web/
 pnpm install
@@ -12,7 +13,8 @@ pnpm run dev
 ```
 
 ### Mobile Development
-*Mobile setup coming soon*
+
+_Mobile setup coming soon_
 
 ## Documentation
 
@@ -24,12 +26,14 @@ pnpm run dev
 - **[Deployment](docs/deployment.md)** - Deployment and infrastructure guides
 
 ### AI Collaboration
+
 - **[Cursor Rules](.cursor/rules/)** - Guidelines for AI assistants working on this project
 
 ### Module Documentation
+
 - **[Web App](web/README.md)** - React web application setup and development
 - **Mobile App** - React Native setup (coming soon)
-- **Core Library** - Shared utilities and algorithms (coming soon)
+- **[Core Library](core/README.md)** - Shared utilities and algorithms
 
 ## Project Structure
 
@@ -38,5 +42,5 @@ pnpm run dev
 ├── docs/                  # Project documentation
 ├── web/                   # React web application
 ├── mobile/                # React Native mobile app (planned)
-└── core/                  # Shared steganography and crypto utilities (planned)
+└── core/                  # Shared steganography
 ```

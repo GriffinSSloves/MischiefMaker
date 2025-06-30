@@ -82,13 +82,16 @@ npm run build
 
 ## Usage Example
 
+### In Web Package
+
 ```typescript
+// web/src/utils/steganography.ts
 import { SteganographyService } from '@mischiefmaker/core';
 
 // Platform-specific implementations injected at runtime
 const steganographyService = new SteganographyService({
-  imageProcessor: webImageProcessor, // or mobileImageProcessor
-  fileSystem: webFileSystem,
+  imageProcessor: webImageProcessor, // Canvas API implementation
+  fileSystem: webFileSystem, // File API implementation
 });
 
 // Encode a message
@@ -103,6 +106,14 @@ const decoded = await steganographyService.decode({
   imageData: steganographicImageBuffer,
 });
 ```
+
+### Workspace Development
+
+The core package is automatically linked during development:
+
+- Changes to core are instantly reflected in web/mobile packages
+- No manual building or publishing required
+- Hot reloading works across packages
 
 ## Core Interfaces
 

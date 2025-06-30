@@ -13,7 +13,7 @@ This document will contain technical specifications for the steganography implem
 
 ## Implementation Details
 
-*To be documented as the steganography engine is developed*
+_To be documented as the steganography engine is developed_
 
 ## Security Considerations
 
