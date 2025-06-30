@@ -1,5 +1,9 @@
 # Current Tasks
 
+## Miscellaneous
+
+- Run a documentation consistency check now that we are using a monorepo package, including Claude.md and any cursor rules files
+
 ## Web Development
 
 _All basic web development tasks completed! Ready for steganography feature development._
@@ -9,7 +13,7 @@ _All basic web development tasks completed! Ready for steganography feature deve
 ### Core Library
 
 - Design and implement the core steganography algorithms
-- Set up shared utilities for image processing and cryptography
+- Set up shared utilities for image processing
 - This needs to be a platform agnostic repo, not a Node.js one.
 
 - Create cross-platform compatible APIs
