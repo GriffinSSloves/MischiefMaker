@@ -12,7 +12,7 @@ MischiefMaker is a cross-platform application for sending secret messages throug
 
 ## Architecture
 
-This is a monorepo with pnpm workspace management designed to share core steganography and cryptographic logic across platforms:
+This is a monorepo with pnpm workspace management designed to share core steganography across platforms:
 
 ### Core Components
 
@@ -47,7 +47,6 @@ This is a monorepo with pnpm workspace management designed to share core stegano
 - Use TypeScript for type safety across platforms
 - Abstract platform-specific APIs behind interfaces
 - Shared validation and business logic
-- Common cryptographic functions
 
 ## Documentation
 
@@ -71,7 +70,7 @@ Project documentation is organized as follows:
 # React Native commands
 npx react-native run-ios
 npx react-native run-android
-npm run test:mobile
+pnpm run test:mobile
 ```
 
 ### Web Development
@@ -97,9 +96,8 @@ cd ..
 
 ```bash
 # Core package testing
-npm run test:core
-npm run test:steganography
-npm run test:crypto
+pnpm run test:core
+pnpm run test:steganography
 ```
 
 ## Testing Strategy
@@ -107,7 +105,6 @@ npm run test:crypto
 - Unit tests for steganography algorithms
 - Integration tests for cross-platform shared code
 - End-to-end tests for message encoding/decoding workflows
-- Security testing for cryptographic implementations
 - Visual regression tests for UI components
 
 ## Platform-Specific Notes

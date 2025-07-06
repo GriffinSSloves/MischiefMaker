@@ -5,7 +5,7 @@ Core steganography engine for MischiefMaker, designed to be platform-agnostic an
 ## Tech Stack
 
 - **TypeScript** - Type safety and better DX
-- **Jest** - Testing framework
+- **Vitest** - Testing framework
 - **ESLint** - Code linting
 - **Interface-driven design** - Platform abstraction through dependency injection
 
@@ -48,37 +48,37 @@ core/
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- npm or pnpm package manager
+- pnpm package manager
 
 ### Installation
 
 1. Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 2. Build the library:
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## Available Scripts
 
-- `npm run build` - Build the library
-- `npm run dev` - Build in watch mode
-- `npm run test` - Run tests in watch mode
-- `npm run test:run` - Run tests once
-- `npm run test:ui` - Run tests with UI interface
-- `npm run coverage` - Run tests with coverage report
-- `npm run lint` - Run ESLint
-- `npm run lint:fix` - Run ESLint with auto-fix
-- `npm run format` - Format code with Prettier
-- `npm run format:check` - Check code formatting
-- `npm run type-check` - Run TypeScript type checking
-- `npm run clean` - Clean build artifacts
-- `npm run pre-commit` - Run all pre-commit checks (format, lint, type-check, build)
+- `pnpm run build` - Build the library
+- `pnpm run dev` - Build in watch mode
+- `pnpm run test` - Run tests in watch mode
+- `pnpm run test:run` - Run tests once
+- `pnpm run test:ui` - Run tests with UI interface
+- `pnpm run coverage` - Run tests with coverage report
+- `pnpm run lint` - Run ESLint
+- `pnpm run lint:fix` - Run ESLint with auto-fix
+- `pnpm run format` - Format code with Prettier
+- `pnpm run format:check` - Check code formatting
+- `pnpm run type-check` - Run TypeScript type checking
+- `pnpm run clean` - Clean build artifacts
+- `pnpm run pre-commit` - Run all pre-commit checks (format, lint, type-check, build)
 
 ## Usage Example
 
@@ -148,7 +148,7 @@ This module is designed to be consumed by the web and mobile applications. Platf
 Always run the pre-commit checks to ensure code quality:
 
 ```bash
-npm run pre-commit
+pnpm run pre-commit
 ```
 
 This command will:
@@ -161,7 +161,7 @@ This command will:
 If any step fails, fix the issues before committing. For formatting issues, run:
 
 ```bash
-npm run format
+pnpm run format
 ```
 
 ## Code Quality
@@ -176,14 +176,14 @@ This project uses **Vitest** for unit testing with comprehensive coverage report
 
 ```bash
 # Run tests in watch mode (recommended during development)
-npm run test
+pnpm run test
 
 # Run tests once (useful for CI/CD)
-npm run test:run
+pnpm run test:run
 
 # Run tests with interactive UI
-npm run test:ui
+pnpm run test:ui
 
 # Run tests with coverage report
-npm run coverage
+pnpm run coverage
 ```
