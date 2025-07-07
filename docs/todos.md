@@ -6,7 +6,7 @@
 
 ## Core Library Development
 
-- ~~Design and document the core steganography algorithms~~ ✅ **COMPLETED** - See [Algorithm Specification](algorithm.md)
+- ~~Design and document the core steganography algorithms~~ ✅ **COMPLETED** - See [Algorithm Specification](../core/docs/algorithm.md)
 - ~~Choose steganography implementation approach~~ ✅ **COMPLETED** - Selected combination strategy with automatic fallback (Simple LSB → Triple Redundancy)
 - **Implement JPEG-first LSB steganography algorithm** with combination strategy and messaging service compatibility
 - **Create universal compression functions** (SMS/MMS quality level targeting - 45% quality)

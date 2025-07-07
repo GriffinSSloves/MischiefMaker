@@ -1,17 +1,18 @@
 ---
-description: 
-globs: 
-alwaysApply: false
+alwaysApply: true
 ---
+
 # Task Prioritization Guide
 
 When determining what tasks to work on next, always consult the following documentation files to understand current priorities and project context:
 
 ## Primary Task Reference
+
 - [todos.md](mdc:docs/todos.md) - Contains the current task list and immediate priorities
 - [completed.md](mdc:docs/completed.md) - History of completed development tasks for context
 
 ## Context and Decision History
+
 - [decisions.md](mdc:docs/decisions.md) - Architecture Decision Records (ADRs) showing past technology choices and rationale
 - [architecture.md](mdc:docs/architecture.md) - Current system architecture and planned components
 - [deployment.md](mdc:docs/deployment.md) - Deployment strategy and infrastructure decisions
@@ -27,6 +28,7 @@ When determining what tasks to work on next, always consult the following docume
 6. **Cross-reference documentation** - Use the docs folder to understand the full project context before making implementation decisions
 
 ## Current Project Status
+
 - Web setup is complete with React 19, TypeScript, Vite, TailwindCSS v4, and ShadCN UI
 - Core library and mobile app are planned but not yet implemented
 - Completed: React Router setup with modern createBrowserRouter architecture ✅

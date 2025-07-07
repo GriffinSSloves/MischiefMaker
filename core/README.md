@@ -43,6 +43,13 @@ core/
 └── tests/                   # Test files
 ```
 
+## Technical Documentation
+
+For detailed algorithm specifications and implementation details:
+
+- **[Algorithm Specification](docs/algorithm.md)** - LSB steganography algorithm design and implementation strategy
+- **[Image Technical Considerations](docs/image-technical-considerations.md)** - Detailed calculations, implementation examples, and technical deep-dive
+
 ## Getting Started
 
 ### Prerequisites

@@ -1,3 +1,61 @@
+---
+alwaysApply: true
+---
+
+# Algorithm Decision Framework
+
+High-level patterns for making technical decisions that emerged from successful algorithm design discussions.
+
+## Decision Documentation Pattern
+
+When making significant algorithm decisions, **update related documentation files simultaneously** rather than sequentially:
+
+- High-level algorithm documentation
+- Detailed technical implementation
+- Decision records (ADRs)
+- Strategy summaries
+- Task lists
+
+This ensures consistency and prevents documentation drift.
+
+## Documentation Level Separation
+
+**Maintain clear separation between high-level and detailed documentation:**
+
+**High-Level Files**: Strategy, configuration constants, pseudocode overview, trade-off summaries
+**Detailed Technical Files**: Complete implementation examples, detailed calculations, platform specifics, alternative approaches
+
+This separation keeps strategic documents focused and implementation details accessible.
+
+## Trade-off Analysis Pattern
+
+When evaluating technical approaches:
+
+- **Include specific metrics** in trade-off analysis (capacity, reliability, complexity)
+- **Document alternatives** even if not implementing immediately
+- **Explain decision rationale** with measurable criteria
+- **Use comparison tables** to clearly present options
+
+## Combination Strategy Preference
+
+When designing algorithms, consider combination approaches that:
+
+- Try optimal method first
+- Automatic fallback to reliable alternatives
+- Method detection for proper handling
+- No user intervention required
+
+This pattern often provides better real-world performance than single-method approaches.
+
+## Configuration Management
+
+- **Extract algorithm constants** for easy adjustment
+- **Document why each setting exists** and impact of changes
+- **Avoid hardcoding values** in multiple places
+
+- **Future flexibility** for enhancements
+- **Consistent documentation** across all files
+
 # Algorithm Decision Framework
 
 High-level patterns for making technical decisions that emerged from successful algorithm design discussions.

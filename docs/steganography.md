@@ -4,7 +4,7 @@
 
 This document contains technical specifications for the steganography implementation in MischiefMaker.
 
-For detailed algorithm design and implementation decisions, see **[Algorithm Specification](algorithm.md)**.
+For detailed algorithm design and implementation decisions, see **[Algorithm Specification](../core/docs/algorithm.md)**.
 
 ## Core Strategy
 
@@ -54,7 +54,7 @@ For detailed algorithm design and implementation decisions, see **[Algorithm Spe
 
 **Capacity**: ~288KB for simple LSB (optimal), ~96KB with triple redundancy fallback (still 96x more than target 1KB message size).
 
-For complete algorithm specifications, detailed capacity calculations, and implementation examples, see **[Algorithm Specification](algorithm.md)** and **[Image Technical Considerations](image-technical-considerations.md)**.
+For complete algorithm specifications, detailed capacity calculations, and implementation examples, see **[Algorithm Specification](../core/docs/algorithm.md)** and **[Image Technical Considerations](../core/docs/image-technical-considerations.md)**.
 
 ## Messaging Service Compatibility
 
