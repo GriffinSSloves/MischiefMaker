@@ -20,6 +20,8 @@ _Mobile setup coming soon_
 
 - **[Architecture](docs/architecture.md)** - System design and technical architecture
 - **[Decision Records](docs/decisions.md)** - Key architectural and technology decisions
+- **[Algorithm Specification](docs/algorithm.md)** - LSB steganography algorithm design and implementation details
+- **[Image Technical Considerations](docs/image-technical-considerations.md)** - Detailed calculations, implementation examples, and technical deep-dive
 - **[Current Tasks](docs/todos.md)** - Current task list and priorities
 - **[Completed Tasks](docs/completed.md)** - History of completed development tasks
 - **[Steganography](docs/steganography.md)** - Technical implementation details

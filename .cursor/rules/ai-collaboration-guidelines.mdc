@@ -31,15 +31,47 @@ These guidelines help AI assistants provide high-quality, consistent responses w
 - Use specific, descriptive naming (`renderWithRouter.tsx` vs `test-utils.tsx`)
 - Maintain co-located tests and feature-based organization
 
+### 4. Parallel Processing Excellence
+
+- **Use parallel tool calls whenever possible** - read multiple files simultaneously, update related documentation together
+- Only use sequential operations when output of one is required for input of next
+- This can make responses 3-5x faster
+
+## Algorithm and Technical Decision Standards
+
+### 5. Documentation Level Separation
+
+**Maintain clear separation between high-level and detailed documentation:**
+
+- **High-level files**: Strategy, configuration, pseudocode overview, trade-off summaries
+- **Detailed technical files**: Complete implementation, calculations, platform specifics, alternatives
+
+This keeps strategic documents focused and implementation details accessible.
+
+### 6. Combination Strategy Preference
+
+**When designing algorithms, consider combination approaches:**
+
+- Try optimal method first, automatic fallback to reliable alternatives
+- Method detection for proper handling, no user intervention required
+- Often provides better real-world performance than single-method approaches
+
+### 7. Simultaneous Documentation Updates
+
+**When making significant algorithm decisions, update related documentation files simultaneously:**
+
+- High-level algorithm documentation, detailed technical implementation, decision records
+- This ensures consistency and prevents documentation drift
+
 ## Testing Standards
 
-### 4. Modern Testing Patterns
+### 8. Modern Testing Patterns
 
 - Create tests for any utilities you build
 - Ensure consistent testing patterns across similar components
 - Update web/README.md with testing utility usage examples
 
-### 5. Quality Gates
+### 9. Quality Gates
 
 - Run tests after changes to ensure nothing breaks
 - Follow zero-warning ESLint policy - fix all warnings
@@ -48,14 +80,14 @@ These guidelines help AI assistants provide high-quality, consistent responses w
 
 ## Communication Style
 
-### 6. Educational Explanations
+### 10. Educational Explanations
 
 - Explain the "why" before the "how"
 - Provide context and reasoning for technical decisions
 - Show before/after comparisons for improvements
 - Discuss trade-offs and alternatives when relevant
 
-### 7. Incremental & Validated Approach
+### 11. Incremental & Validated Approach
 
 - Build complex features step-by-step
 - Use parallel tool calls for efficiency when updating multiple files
@@ -64,12 +96,12 @@ These guidelines help AI assistants provide high-quality, consistent responses w
 
 ## Project-Specific Guidelines
 
-### 8. MischiefMaker Context
+### 12. MischiefMaker Context
 
 - **Tone**: Keep it fun and playful (per ADR-005) - tool for friends, not academic
 - **Architecture**: Follow monorepo structure (web/, mobile/, core/)
 
-### 9. Workflow Standards
+### 13. Workflow Standards
 
 - **Pre-commit mindset**: Format, lint, type-check, build before considering done
 - **Documentation coverage**: Every feature should be documented
@@ -78,14 +110,14 @@ These guidelines help AI assistants provide high-quality, consistent responses w
 
 ## Response Structure Requirements
 
-### 10. Effective Communication
+### 14. Effective Communication
 
 - Plan out loud - explain what you'll do before doing it
 - Use parallel tool calls when operations can be simultaneous
 - Validate results and confirm tests pass
 - Summarize impact and explain why changes matter
 
-### 11. Success Criteria
+### 15. Success Criteria
 
 Every response should aim for:
 
@@ -101,6 +133,8 @@ Every response should aim for:
 - Prefer explicit over implicit (clear naming, obvious intent)
 - Ask for clarification rather than making assumptions
 - Think about the next developer who will work on this code
+- **Use combination strategies** that optimize for multiple goals
+- **Use parallel operations** whenever possible for efficiency
 
 ## Quick Reference Commands
 

@@ -54,6 +54,8 @@ Project documentation is organized as follows:
 
 - **[Architecture](docs/architecture.md)** - System architecture and technical decisions
 - **[Decision Records](docs/decisions.md)** - Architecture Decision Records (ADRs)
+- **[Algorithm Specification](docs/algorithm.md)** - LSB steganography algorithm design and implementation details
+- **[Image Technical Considerations](docs/image-technical-considerations.md)** - Detailed calculations, implementation examples, and technical deep-dive
 - **[Steganography](docs/steganography.md)** - Technical specifications for steganography implementation
 - **[Deployment](docs/deployment.md)** - Deployment guides and infrastructure setup
 - **Module READMEs** - Each folder (web/, mobile/, core/) contains specific setup documentation

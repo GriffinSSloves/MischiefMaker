@@ -1,0 +1,81 @@
+---
+alwaysApply: true
+---
+
+# Parallel Processing Guidelines
+
+Maximize efficiency by using parallel tool calls whenever possible.
+
+## When to Use Parallel Tool Calls
+
+**Use parallel tool calls for:**
+
+- Reading multiple files simultaneously when gathering information
+- Updating multiple related files at the same time
+- Running different searches with different patterns
+- Any operations that don't depend on each other's output
+
+**Use sequential only when:**
+
+- Output of one operation is required for input of next
+- Making decisions based on information just gathered
+
+## Examples
+
+**Good (Parallel):**
+
+```
+- Read algorithm.md, decisions.md, and steganography.md simultaneously
+- Update all documentation files when making algorithm decisions
+- Run multiple grep searches with different patterns
+```
+
+**Avoid (Sequential when parallel possible):**
+
+```
+- Read file A, then read file B, then read file C
+- Update file A, wait, then update file B, wait, then update file C
+```
+
+This simple change can make responses 3-5x faster.
+
+---
+
+# Parallel Processing Guidelines
+
+Maximize efficiency by using parallel tool calls whenever possible.
+
+## When to Use Parallel Tool Calls
+
+**Use parallel tool calls for:**
+
+- Reading multiple files simultaneously when gathering information
+- Updating multiple related files at the same time
+- Running different searches with different patterns
+- Any operations that don't depend on each other's output
+
+**Use sequential only when:**
+
+- Output of one operation is required for input of next
+- Making decisions based on information just gathered
+
+## Examples
+
+**Good (Parallel):**
+
+```
+- Read algorithm.md, decisions.md, and steganography.md simultaneously
+- Update all documentation files when making algorithm decisions
+- Run multiple grep searches with different patterns
+```
+
+**Avoid (Sequential when parallel possible):**
+
+```
+- Read file A, then read file B, then read file C
+- Update file A, wait, then update file B, wait, then update file C
+```
+
+This simple change can make responses 3-5x faster.
+
+---
