@@ -1,4 +1,4 @@
-import type { EncodingMethod } from './AlgorithmTypes';
+import type { EncodingMethod } from './EncodingMethod';
 
 /**
  * Steganography header structure embedded in images

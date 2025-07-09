@@ -1,7 +1,7 @@
 import type { PixelData } from '../types/PixelData';
 import type { SteganographyHeader } from '../types/SteganographyHeader';
-import type { ValidationResult } from '../types/ResultTypes';
-import type { LSBConfig } from '../types/AlgorithmTypes';
+import type { ValidationResult } from '../types/ValidationResult';
+import type { LSBConfig } from '../types/LSBConfig';
 
 /**
  * Base interface for LSB decoding operations

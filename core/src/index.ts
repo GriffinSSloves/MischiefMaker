@@ -6,8 +6,11 @@ export type { IEncoder, ISimpleLSBEncoder, ITripleRedundancyEncoder, IAdaptiveLS
 export type { IDecoder, ISimpleLSBDecoder, ITripleRedundancyDecoder, IAdaptiveLSBDecoder } from './interfaces/IDecoder';
 export type { ICapacityCalculator } from './interfaces/ICapacityCalculator';
 
-// Algorithm types - direct imports
-export type { EncodingMethod, AlgorithmConfig, CompressionOptions, LSBConfig } from './types/AlgorithmTypes';
+// Algorithm types - direct imports from individual files
+export type { EncodingMethod } from './types/EncodingMethod';
+export type { AlgorithmConfig } from './types/AlgorithmConfig';
+export type { CompressionOptions } from './types/CompressionOptions';
+export type { LSBConfig } from './types/LSBConfig';
 
 // Data types - direct imports from individual files
 export type { SteganographyHeader } from './types/SteganographyHeader';
@@ -15,8 +18,11 @@ export type { PixelData } from './types/PixelData';
 export type { CapacityInfo } from './types/CapacityInfo';
 export type { BitOperation } from './types/BitOperation';
 
-// Result types - direct imports
-export type { EncodingResult, DecodingResult, ValidationResult, CapacityCheckResult } from './types/ResultTypes';
+// Result types - direct imports from individual files
+export type { EncodingResult } from './types/EncodingResult';
+export type { DecodingResult } from './types/DecodingResult';
+export type { ValidationResult } from './types/ValidationResult';
+export type { CapacityCheckResult } from './types/CapacityCheckResult';
 
 // Constants - direct imports
 export {

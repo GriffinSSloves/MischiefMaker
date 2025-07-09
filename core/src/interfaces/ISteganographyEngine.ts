@@ -1,5 +1,7 @@
-import type { EncodingResult, DecodingResult, CapacityCheckResult } from '../types/ResultTypes';
-import type { CompressionOptions } from '../types/AlgorithmTypes';
+import type { EncodingResult } from '../types/EncodingResult';
+import type { DecodingResult } from '../types/DecodingResult';
+import type { CapacityCheckResult } from '../types/CapacityCheckResult';
+import type { CompressionOptions } from '../types/CompressionOptions';
 
 /**
  * Main steganography engine interface

@@ -1,5 +1,5 @@
 import type { SteganographyHeader } from '../../types/SteganographyHeader';
-import type { EncodingMethod } from '../../types/AlgorithmTypes';
+import type { EncodingMethod } from '../../types/EncodingMethod';
 import { BitOperations } from '../BitOperations/BitOperations';
 import { ChecksumUtility } from '../ChecksumUtility/ChecksumUtility';
 import { HEADER_CONSTANTS, CAPACITY_CONSTANTS } from '../../types/Constants';

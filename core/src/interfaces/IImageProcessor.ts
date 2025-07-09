@@ -1,4 +1,4 @@
-import type { CompressionOptions } from '../types/AlgorithmTypes';
+import type { CompressionOptions } from '../types/CompressionOptions';
 import type { PixelData } from '../types/PixelData';
 
 /**

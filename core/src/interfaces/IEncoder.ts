@@ -1,6 +1,6 @@
 import type { PixelData } from '../types/PixelData';
 import type { SteganographyHeader } from '../types/SteganographyHeader';
-import type { LSBConfig } from '../types/AlgorithmTypes';
+import type { LSBConfig } from '../types/LSBConfig';
 
 /**
  * Base interface for LSB encoding operations

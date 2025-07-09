@@ -1,4 +1,4 @@
-import type { AlgorithmConfig } from './AlgorithmTypes';
+import type { AlgorithmConfig } from './AlgorithmConfig';
 
 /**
  * Core algorithm constants for MischiefMaker steganography
