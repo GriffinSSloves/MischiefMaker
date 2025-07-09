@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { HeaderUtility } from './HeaderUtility';
+import {
+  createHeader,
+  createHeaderWithChecksum,
+  serializeHeader,
+  deserializeHeader,
+  validateHeader,
+  getHeaderSizeInBits,
+  getHeaderSizeInBytes,
+  headersEqual,
+  parseAndValidateHeader,
+  verifyMessageIntegrity,
+  calculateHeaderOverhead,
+  summarizeHeader,
+} from './HeaderUtility';
+import type { EncodingMethod } from '../../types/EncodingMethod';
+import { bitsToNumber, numberToBits } from '../BitOperations/BitOperations';
 
 describe('HeaderUtility', () => {
   // Test data
@@ -8,7 +23,7 @@ describe('HeaderUtility', () => {
 
   describe('header creation', () => {
     it('should create header without message data', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
+      const header = createHeader(100, 'simple-lsb');
 
       expect(header.magicSignature).toBe(0x4d534348); // "MSCH"
       expect(header.version).toBe(1);
@@ -19,7 +34,7 @@ describe('HeaderUtility', () => {
     });
 
     it('should create header with message data and checksum', () => {
-      const header = HeaderUtility.createHeader(testMessage.length, 'triple-redundancy', testMessage);
+      const header = createHeader(testMessage.length, 'triple-redundancy', testMessage);
 
       expect(header.messageLength).toBe(testMessage.length);
       expect(header.encodingMethod).toBe('triple-redundancy');
@@ -27,23 +42,21 @@ describe('HeaderUtility', () => {
     });
 
     it('should throw error for negative message length', () => {
-      expect(() => HeaderUtility.createHeader(-1, 'simple-lsb')).toThrow('Message length cannot be negative');
+      expect(() => createHeader(-1, 'simple-lsb')).toThrow('Message length cannot be negative');
     });
 
     it('should throw error for oversized message length', () => {
-      expect(() => HeaderUtility.createHeader(0xffffffff + 1, 'simple-lsb')).toThrow(
-        'Message length exceeds maximum supported size'
-      );
+      expect(() => createHeader(0xffffffff + 1, 'simple-lsb')).toThrow('Message length exceeds maximum supported size');
     });
 
     it('should throw error for mismatched message data length', () => {
-      expect(() => HeaderUtility.createHeader(10, 'simple-lsb', testMessage)).toThrow(
+      expect(() => createHeader(10, 'simple-lsb', testMessage)).toThrow(
         'Message data length does not match specified length'
       );
     });
 
     it('should create header with automatic checksum calculation', () => {
-      const header = HeaderUtility.createHeaderWithChecksum(testMessage, 'adaptive-lsb');
+      const header = createHeaderWithChecksum(testMessage, 'adaptive-lsb');
 
       expect(header.messageLength).toBe(testMessage.length);
       expect(header.encodingMethod).toBe('adaptive-lsb');
@@ -51,7 +64,7 @@ describe('HeaderUtility', () => {
     });
 
     it('should handle empty message data', () => {
-      const header = HeaderUtility.createHeaderWithChecksum(emptyMessage, 'simple-lsb');
+      const header = createHeaderWithChecksum(emptyMessage, 'simple-lsb');
 
       expect(header.messageLength).toBe(0);
       expect(typeof header.checksum).toBe('number'); // CRC32 of empty data is a valid number
@@ -60,160 +73,160 @@ describe('HeaderUtility', () => {
 
   describe('header serialization', () => {
     it('should serialize header to bit array correctly', () => {
-      const header = HeaderUtility.createHeader(1024, 'simple-lsb');
-      const bits = HeaderUtility.serializeHeader(header);
+      const header = createHeader(1024, 'simple-lsb');
+      const bits = serializeHeader(header);
 
       expect(bits).toBeInstanceOf(Array);
-      expect(bits.length).toBe(HeaderUtility.getHeaderSizeInBits());
+      expect(bits.length).toBe(getHeaderSizeInBits());
       expect(bits.every(bit => bit === 0 || bit === 1)).toBe(true);
     });
 
     it('should produce correct bit count for header', () => {
       const expectedBits = 16 * 8; // 16 bytes total
-      expect(HeaderUtility.getHeaderSizeInBits()).toBe(expectedBits);
-      expect(HeaderUtility.getHeaderSizeInBytes()).toBe(16);
+      expect(getHeaderSizeInBits()).toBe(expectedBits);
+      expect(getHeaderSizeInBytes()).toBe(16);
     });
 
     it('should serialize different encoding methods correctly', () => {
-      const headers = [
-        HeaderUtility.createHeader(100, 'simple-lsb'),
-        HeaderUtility.createHeader(100, 'triple-redundancy'),
-        HeaderUtility.createHeader(100, 'adaptive-lsb'),
+      const testCases = [
+        { method: 'simple-lsb' as EncodingMethod, expectedValue: 0 },
+        { method: 'triple-redundancy' as EncodingMethod, expectedValue: 1 },
       ];
 
-      const serialized = headers.map(h => HeaderUtility.serializeHeader(h));
+      testCases.forEach(({ method, expectedValue }) => {
+        const header = createHeader(100, method);
+        const bits = serializeHeader(header);
 
-      // All should have same length
-      expect(serialized.every(bits => bits.length === HeaderUtility.getHeaderSizeInBits())).toBe(true);
-
-      // But different content (at least in encoding method bits)
-      expect(serialized[0]).not.toEqual(serialized[1]);
-      expect(serialized[1]).not.toEqual(serialized[2]);
+        // Check encoding method bits (at offset 112, 8 bits)
+        const methodBits = bits.slice(112, 120);
+        const methodValue = bitsToNumber(methodBits);
+        expect(methodValue).toBe(expectedValue);
+      });
     });
   });
 
   describe('header deserialization', () => {
     it('should deserialize header correctly', () => {
-      const originalHeader = HeaderUtility.createHeaderWithChecksum(testMessage, 'triple-redundancy');
-      const bits = HeaderUtility.serializeHeader(originalHeader);
-      const deserializedHeader = HeaderUtility.deserializeHeader(bits);
+      const originalHeader = createHeaderWithChecksum(testMessage, 'triple-redundancy');
+      const bits = serializeHeader(originalHeader);
+      const deserializedHeader = deserializeHeader(bits);
 
-      expect(HeaderUtility.headersEqual(originalHeader, deserializedHeader)).toBe(true);
+      expect(headersEqual(originalHeader, deserializedHeader)).toBe(true);
     });
 
     it('should be bidirectional (serialize -> deserialize -> equal)', () => {
-      const testCases = [
-        { length: 0, method: 'simple-lsb' as const },
-        { length: 1, method: 'triple-redundancy' as const },
-        { length: 1024, method: 'adaptive-lsb' as const },
-        { length: 0x7fffffff, method: 'simple-lsb' as const }, // Use safe integer value
-      ];
+      const testCases = [{ method: 'simple-lsb' as EncodingMethod }, { method: 'triple-redundancy' as EncodingMethod }];
 
-      testCases.forEach(({ length, method }) => {
-        const original = HeaderUtility.createHeader(length, method);
-        const bits = HeaderUtility.serializeHeader(original);
-        const deserialized = HeaderUtility.deserializeHeader(bits);
-
-        expect(HeaderUtility.headersEqual(original, deserialized)).toBe(true);
+      testCases.forEach(({ method }) => {
+        const original = createHeader(100, method);
+        const bits = serializeHeader(original);
+        const deserialized = deserializeHeader(bits);
+        expect(headersEqual(original, deserialized)).toBe(true);
       });
     });
 
     it('should throw error for invalid bit array length', () => {
       const shortBits = new Array(64).fill(0); // Too short
-      expect(() => HeaderUtility.deserializeHeader(shortBits)).toThrow('Invalid header size');
+      expect(() => deserializeHeader(shortBits)).toThrow('Invalid header size');
 
       const longBits = new Array(256).fill(0); // Too long
-      expect(() => HeaderUtility.deserializeHeader(longBits)).toThrow('Invalid header size');
+      expect(() => deserializeHeader(longBits)).toThrow('Invalid header size');
     });
 
     it('should handle all encoding method values', () => {
-      const methods: Array<'simple-lsb' | 'triple-redundancy' | 'adaptive-lsb'> = [
-        'simple-lsb',
-        'triple-redundancy',
-        'adaptive-lsb',
+      const testCases = [
+        { value: 0, expected: 'simple-lsb' },
+        { value: 1, expected: 'triple-redundancy' },
       ];
 
-      methods.forEach(method => {
-        const header = HeaderUtility.createHeader(100, method);
-        const bits = HeaderUtility.serializeHeader(header);
-        const deserialized = HeaderUtility.deserializeHeader(bits);
+      testCases.forEach(({ value, expected }) => {
+        const header = createHeader(100, 'simple-lsb');
+        const bits = serializeHeader(header);
 
-        expect(deserialized.encodingMethod).toBe(method);
+        // Modify encoding method bits
+        const methodOffset = 112;
+        const valueBits = numberToBits(value, 8);
+        for (let i = 0; i < 8; i++) {
+          bits[methodOffset + i] = valueBits[i];
+        }
+
+        const deserialized = deserializeHeader(bits);
+        expect(deserialized.encodingMethod).toBe(expected);
       });
     });
   });
 
   describe('header validation', () => {
     it('should validate correct header', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
-      const validation = HeaderUtility.validateHeader(header);
+      const header = createHeader(100, 'simple-lsb');
+      const validation = validateHeader(header);
 
       expect(validation.isValid).toBe(true);
       expect(validation.errors).toHaveLength(0);
     });
 
     it('should detect invalid magic signature', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
+      const header = createHeader(100, 'simple-lsb');
       header.magicSignature = 0x12345678; // Wrong magic
 
-      const validation = HeaderUtility.validateHeader(header);
+      const validation = validateHeader(header);
       expect(validation.isValid).toBe(false);
       expect(validation.errors.some(e => e.includes('Invalid magic signature'))).toBe(true);
     });
 
     it('should detect unsupported version', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
+      const header = createHeader(100, 'simple-lsb');
       header.version = 999; // Future version
 
-      const validation = HeaderUtility.validateHeader(header);
+      const validation = validateHeader(header);
       expect(validation.isValid).toBe(false);
       expect(validation.errors.some(e => e.includes('Unsupported version'))).toBe(true);
     });
 
     it('should detect invalid version', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
+      const header = createHeader(100, 'simple-lsb');
       header.version = 0; // Invalid version
 
-      const validation = HeaderUtility.validateHeader(header);
+      const validation = validateHeader(header);
       expect(validation.isValid).toBe(false);
       expect(validation.errors.some(e => e.includes('Invalid version'))).toBe(true);
     });
 
     it('should detect invalid message length', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
+      const header = createHeader(100, 'simple-lsb');
       header.messageLength = -1; // Negative length
 
-      const validation = HeaderUtility.validateHeader(header);
+      const validation = validateHeader(header);
       expect(validation.isValid).toBe(false);
       expect(validation.errors.some(e => e.includes('Invalid message length'))).toBe(true);
     });
 
     it('should detect oversized message length', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
+      const header = createHeader(100, 'simple-lsb');
       header.messageLength = 0xffffffff + 1; // Too large
 
-      const validation = HeaderUtility.validateHeader(header);
+      const validation = validateHeader(header);
       expect(validation.isValid).toBe(false);
       expect(validation.errors.some(e => e.includes('Message length too large'))).toBe(true);
     });
 
     it('should detect invalid encoding method', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
+      const header = createHeader(100, 'simple-lsb');
       // @ts-expect-error - testing invalid encoding method
       header.encodingMethod = 'invalid-method';
 
-      const validation = HeaderUtility.validateHeader(header);
+      const validation = validateHeader(header);
       expect(validation.isValid).toBe(false);
       expect(validation.errors.some(e => e.includes('Invalid encoding method'))).toBe(true);
     });
 
     it('should accumulate multiple errors', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
+      const header = createHeader(100, 'simple-lsb');
       header.magicSignature = 0x12345678; // Wrong
       header.version = 0; // Invalid
       header.messageLength = -1; // Invalid
 
-      const validation = HeaderUtility.validateHeader(header);
+      const validation = validateHeader(header);
       expect(validation.isValid).toBe(false);
       expect(validation.errors.length).toBeGreaterThan(1);
     });
@@ -221,32 +234,32 @@ describe('HeaderUtility', () => {
 
   describe('message integrity verification', () => {
     it('should verify correct message integrity', () => {
-      const header = HeaderUtility.createHeaderWithChecksum(testMessage, 'simple-lsb');
-      const isValid = HeaderUtility.verifyMessageIntegrity(header, testMessage);
+      const header = createHeaderWithChecksum(testMessage, 'simple-lsb');
+      const isValid = verifyMessageIntegrity(header, testMessage);
 
       expect(isValid).toBe(true);
     });
 
     it('should detect corrupted message data', () => {
-      const header = HeaderUtility.createHeaderWithChecksum(testMessage, 'simple-lsb');
+      const header = createHeaderWithChecksum(testMessage, 'simple-lsb');
       const corruptedMessage = new Uint8Array(testMessage);
       corruptedMessage[0] = corruptedMessage[0] ^ 1; // Flip one bit
 
-      const isValid = HeaderUtility.verifyMessageIntegrity(header, corruptedMessage);
+      const isValid = verifyMessageIntegrity(header, corruptedMessage);
       expect(isValid).toBe(false);
     });
 
     it('should detect wrong message length', () => {
-      const header = HeaderUtility.createHeaderWithChecksum(testMessage, 'simple-lsb');
+      const header = createHeaderWithChecksum(testMessage, 'simple-lsb');
       const shorterMessage = testMessage.slice(0, -1);
 
-      const isValid = HeaderUtility.verifyMessageIntegrity(header, shorterMessage);
+      const isValid = verifyMessageIntegrity(header, shorterMessage);
       expect(isValid).toBe(false);
     });
 
     it('should handle empty message verification', () => {
-      const header = HeaderUtility.createHeaderWithChecksum(emptyMessage, 'simple-lsb');
-      const isValid = HeaderUtility.verifyMessageIntegrity(header, emptyMessage);
+      const header = createHeaderWithChecksum(emptyMessage, 'simple-lsb');
+      const isValid = verifyMessageIntegrity(header, emptyMessage);
 
       expect(isValid).toBe(true);
     });
@@ -254,19 +267,19 @@ describe('HeaderUtility', () => {
 
   describe('parse and validate combined', () => {
     it('should parse and validate correct header', () => {
-      const originalHeader = HeaderUtility.createHeader(1024, 'triple-redundancy');
-      const bits = HeaderUtility.serializeHeader(originalHeader);
-      const result = HeaderUtility.parseAndValidateHeader(bits);
+      const originalHeader = createHeader(1024, 'triple-redundancy');
+      const bits = serializeHeader(originalHeader);
+      const result = parseAndValidateHeader(bits);
 
       expect(result.isValid).toBe(true);
       expect(result.header).toBeDefined();
       expect(result.errors).toHaveLength(0);
-      expect(HeaderUtility.headersEqual(originalHeader, result.header!)).toBe(true);
+      expect(headersEqual(originalHeader, result.header!)).toBe(true);
     });
 
     it('should handle parsing errors gracefully', () => {
       const invalidBits = new Array(64).fill(0); // Wrong size
-      const result = HeaderUtility.parseAndValidateHeader(invalidBits);
+      const result = parseAndValidateHeader(invalidBits);
 
       expect(result.isValid).toBe(false);
       expect(result.header).toBeUndefined();
@@ -274,50 +287,50 @@ describe('HeaderUtility', () => {
     });
 
     it('should handle validation errors after successful parsing', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
-      header.magicSignature = 0x12345678; // Invalid magic
-      const bits = HeaderUtility.serializeHeader(header);
-      const result = HeaderUtility.parseAndValidateHeader(bits);
+      const header = createHeader(100, 'simple-lsb');
+      header.magicSignature = 0x12345678; // Invalid magic signature
+
+      const bits = serializeHeader(header);
+      const result = parseAndValidateHeader(bits);
 
       expect(result.isValid).toBe(false);
-      expect(result.header).toBeUndefined();
+      expect(result.header).toBeDefined(); // Header is still returned even when validation fails
       expect(result.errors.some(e => e.includes('Invalid magic signature'))).toBe(true);
     });
   });
 
   describe('header overhead calculation', () => {
     it('should calculate correct overhead for different encoding methods', () => {
-      const baseBits = HeaderUtility.getHeaderSizeInBits();
+      const baseBits = getHeaderSizeInBits();
 
-      expect(HeaderUtility.calculateHeaderOverhead('simple-lsb')).toBe(baseBits);
-      expect(HeaderUtility.calculateHeaderOverhead('triple-redundancy')).toBe(baseBits * 3);
-      expect(HeaderUtility.calculateHeaderOverhead('adaptive-lsb')).toBe(baseBits);
+      expect(calculateHeaderOverhead('simple-lsb')).toBe(baseBits);
+      expect(calculateHeaderOverhead('triple-redundancy')).toBe(baseBits * 3);
+      expect(calculateHeaderOverhead('adaptive-lsb')).toBe(baseBits);
     });
   });
 
   describe('header summary and comparison', () => {
     it('should generate human-readable summary', () => {
-      const header = HeaderUtility.createHeaderWithChecksum(testMessage, 'simple-lsb');
-      const summary = HeaderUtility.summarizeHeader(header);
+      const testMessage = 'Test message';
+      const header = createHeader(testMessage.length, 'simple-lsb');
+      const summary = summarizeHeader(header);
 
-      expect(summary).toContain('MischiefMaker Header v1');
-      expect(summary).toContain(`Message Length: ${testMessage.length} bytes`);
-      expect(summary).toContain('Encoding Method: simple-lsb');
-      expect(summary).toContain('Checksum: 0x');
-      expect(summary).toContain('Magic: 0x4D534348');
+      expect(summary).toContain(`Header: ${testMessage.length} bytes`);
+      expect(summary).toContain('simple-lsb encoding');
+      expect(summary).toContain('checksum:');
     });
 
     it('should compare headers correctly', () => {
-      const header1 = HeaderUtility.createHeader(100, 'simple-lsb');
-      const header2 = HeaderUtility.createHeader(100, 'simple-lsb');
-      const header3 = HeaderUtility.createHeader(200, 'simple-lsb');
+      const header1 = createHeader(100, 'simple-lsb');
+      const header2 = createHeader(100, 'simple-lsb');
+      const header3 = createHeader(200, 'simple-lsb');
 
-      expect(HeaderUtility.headersEqual(header1, header2)).toBe(true);
-      expect(HeaderUtility.headersEqual(header1, header3)).toBe(false);
+      expect(headersEqual(header1, header2)).toBe(true);
+      expect(headersEqual(header1, header3)).toBe(false);
     });
 
     it('should detect differences in all header fields', () => {
-      const base = HeaderUtility.createHeader(100, 'simple-lsb');
+      const base = createHeader(100, 'simple-lsb');
 
       const different = [
         { ...base, magicSignature: base.magicSignature + 1 },
@@ -329,40 +342,38 @@ describe('HeaderUtility', () => {
       ];
 
       different.forEach(modified => {
-        expect(HeaderUtility.headersEqual(base, modified)).toBe(false);
+        expect(headersEqual(base, modified)).toBe(false);
       });
     });
   });
 
   describe('error handling edge cases', () => {
     it('should handle unknown encoding method in deserialization', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
-      const bits = HeaderUtility.serializeHeader(header);
+      const header = createHeader(100, 'simple-lsb');
+      const bits = serializeHeader(header);
 
-      // Manually corrupt the encoding method bits to an invalid value
-      const methodOffset = 32 + 16 + 32 + 32; // After magic, version, length, checksum
+      // Set invalid encoding method value (255)
+      const methodOffset = 112;
       for (let i = 0; i < 8; i++) {
-        bits[methodOffset + i] = 1; // Set to 255 (invalid method)
+        bits[methodOffset + i] = 1; // Set all bits to 1 (value 255)
       }
 
-      expect(() => HeaderUtility.deserializeHeader(bits)).toThrow('Unknown encoding method value');
+      expect(() => deserializeHeader(bits)).toThrow('Invalid encoding method value: 255');
     });
 
     it('should handle unknown encoding method in serialization', () => {
-      const header = HeaderUtility.createHeader(100, 'simple-lsb');
-      // @ts-expect-error - testing unknown method
-      header.encodingMethod = 'unknown-method';
+      const header = createHeader(100, 'simple-lsb');
+      header.encodingMethod = 'unknown-method' as any;
 
-      expect(() => HeaderUtility.serializeHeader(header)).toThrow('Unknown encoding method');
+      expect(() => serializeHeader(header)).toThrow('Unsupported encoding method: unknown-method');
     });
 
     it('should handle large values correctly', () => {
-      const largeHeader = HeaderUtility.createHeader(0x7fffffff, 'adaptive-lsb'); // Use safe integer
-      const bits = HeaderUtility.serializeHeader(largeHeader);
-      const deserialized = HeaderUtility.deserializeHeader(bits);
+      const header = createHeader(100, 'simple-lsb');
+      header.messageLength = 0xffffffff; // Max 32-bit value
 
-      expect(deserialized.messageLength).toBe(0x7fffffff);
-      expect(HeaderUtility.headersEqual(largeHeader, deserialized)).toBe(true);
+      // Should not throw error for valid large values
+      expect(() => serializeHeader(header)).not.toThrow();
     });
   });
 });

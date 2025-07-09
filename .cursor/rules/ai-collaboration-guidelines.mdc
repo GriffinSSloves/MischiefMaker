@@ -108,16 +108,31 @@ This keeps strategic documents focused and implementation details accessible.
 - Maintain comprehensive test coverage for new features
 - Think about maintainability and future extensibility
 
+### 13. AI-Friendly Testing Commands
+
+**ALWAYS use `pnpm run test:run` for AI helpers, never `pnpm test`:**
+
+- `pnpm run test:run` - Non-interactive mode, runs once and exits cleanly
+- `pnpm test` - Interactive watch mode, hangs waiting for input (bad for AI)
+
+**Benefits of `test:run` for AI helpers:**
+
+- ✅ Provides clear, structured test output
+- ✅ Returns proper exit codes (0 = success, 1 = failure)
+- ✅ No hanging or waiting for user input
+- ✅ Consistent, predictable behavior
+- ✅ Can target specific test files: `pnpm run test:run path/to/test.ts`
+
 ## Communication Style
 
-### 13. Educational Explanations
+### 14. Educational Explanations
 
 - Explain the "why" before the "how"
 - Provide context and reasoning for technical decisions
 - Show before/after comparisons for improvements
 - Discuss trade-offs and alternatives when relevant
 
-### 14. Incremental & Validated Approach
+### 15. Incremental & Validated Approach
 
 - Build complex features step-by-step
 - Use parallel tool calls for efficiency when updating multiple files
@@ -126,12 +141,12 @@ This keeps strategic documents focused and implementation details accessible.
 
 ## Project-Specific Guidelines
 
-### 15. MischiefMaker Context
+### 16. MischiefMaker Context
 
 - **Tone**: Keep it fun and playful (per ADR-005) - tool for friends, not academic
 - **Architecture**: Follow monorepo structure (web/, mobile/, core/)
 
-### 16. Workflow Standards
+### 17. Workflow Standards
 
 - **Pre-commit mindset**: Format, lint, type-check, build before considering done
 - **Documentation coverage**: Every feature should be documented
@@ -140,14 +155,14 @@ This keeps strategic documents focused and implementation details accessible.
 
 ## Response Structure Requirements
 
-### 17. Effective Communication
+### 18. Effective Communication
 
 - Plan out loud - explain what you'll do before doing it
 - Use parallel tool calls when operations can be simultaneous
 - Validate results and confirm tests pass
 - Summarize impact and explain why changes matter
 
-### 18. Success Criteria
+### 19. Success Criteria
 
 Every response should aim for:
 
@@ -168,7 +183,10 @@ Every response should aim for:
 
 ## Quick Reference Commands
 
-- Run tests: `cd web && pnpm run test:run`
-- Check documentation consistency across: README.md, docs/architecture.md, docs/decisions.md, docs/todos.md, docs/completed.md, web/README.md
-- Lint: `cd web && pnpm run lint`
-- Format: `cd web && pnpm run format`
+- **Run tests (AI-friendly)**:
+  - Web: `cd web && pnpm run test:run`
+  - Core: `cd core && pnpm run test:run`
+  - Specific file: `cd core && pnpm run test:run path/to/test.ts`
+- **Check documentation consistency across**: README.md, docs/architecture.md, docs/decisions.md, docs/todos.md, docs/completed.md, web/README.md
+- **Lint**: `cd web && pnpm run lint` or `cd core && pnpm run lint`
+- **Format**: `cd web && pnpm run format` or `cd core && pnpm run format`

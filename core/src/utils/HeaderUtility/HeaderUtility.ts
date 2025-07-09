@@ -1,337 +1,330 @@
 import type { SteganographyHeader } from '../../types/SteganographyHeader';
 import type { EncodingMethod } from '../../types/EncodingMethod';
-import { BitOperations } from '../BitOperations/BitOperations';
-import { ChecksumUtility } from '../ChecksumUtility/ChecksumUtility';
-import { HEADER_CONSTANTS, CAPACITY_CONSTANTS } from '../../types/Constants';
+import { numberToBits, bitsToNumber } from '../BitOperations/BitOperations';
+import { calculateCRC32 } from '../ChecksumUtility/ChecksumUtility';
+import { CAPACITY_CONSTANTS } from '../../types/Constants';
 
 /**
- * Utility class for creating and parsing steganography headers
- * Handles header serialization, validation, and integrity verification
+ * Steganography header creation and parsing functions
+ * Pure functions for header serialization, validation, and integrity verification
  */
-export class HeaderUtility {
-  /**
-   * Magic signature for MischiefMaker headers - "MSCH" as 32-bit integer
-   */
-  private static readonly MAGIC_SIGNATURE = 0x4d534348; // "MSCH" in ASCII
 
-  /**
-   * Current header version
-   */
-  private static readonly CURRENT_VERSION = 1;
+/**
+ * Magic signature for MischiefMaker headers - "MSCH" as 32-bit integer
+ */
+const MAGIC_SIGNATURE = 0x4d534348; // "MSCH" in ASCII
 
-  /**
-   * Create a steganography header for embedding
-   */
-  static createHeader(
-    messageLength: number,
-    encodingMethod: EncodingMethod,
-    messageData?: Uint8Array
-  ): SteganographyHeader {
-    // Validate inputs
-    if (messageLength < 0) {
-      throw new Error('Message length cannot be negative');
-    }
+/**
+ * Current header version
+ */
+const CURRENT_VERSION = 1;
 
-    if (messageLength > 0xffffffff) {
-      throw new Error('Message length exceeds maximum supported size (4GB)');
-    }
-
-    // Calculate checksum if message data is provided
-    let checksum = 0;
-    if (messageData) {
-      if (messageData.length !== messageLength) {
-        throw new Error('Message data length does not match specified length');
-      }
-      checksum = ChecksumUtility.calculateCRC32(messageData);
-    }
-
-    return {
-      magicSignature: this.MAGIC_SIGNATURE,
-      version: this.CURRENT_VERSION,
-      messageLength,
-      checksum,
-      encodingMethod,
-      reserved: 0, // Reserved for future use
-    };
+/**
+ * Create a steganography header for embedding
+ */
+export function createHeader(
+  messageLength: number,
+  encodingMethod: EncodingMethod,
+  messageData?: Uint8Array
+): SteganographyHeader {
+  // Validate inputs
+  if (messageLength < 0) {
+    throw new Error('Message length cannot be negative');
   }
 
-  /**
-   * Serialize header to bit array for embedding
-   */
-  static serializeHeader(header: SteganographyHeader): number[] {
-    const bits: number[] = [];
-
-    // Magic signature (4 bytes = 32 bits)
-    const magicBits = BitOperations.numberToBits(header.magicSignature, 32);
-    bits.push(...magicBits);
-
-    // Version (2 bytes = 16 bits)
-    const versionBits = BitOperations.numberToBits(header.version, 16);
-    bits.push(...versionBits);
-
-    // Message length (4 bytes = 32 bits)
-    const lengthBits = BitOperations.numberToBits(header.messageLength, 32);
-    bits.push(...lengthBits);
-
-    // Checksum (4 bytes = 32 bits)
-    const checksumBits = BitOperations.numberToBits(header.checksum, 32);
-    bits.push(...checksumBits);
-
-    // Encoding method (1 byte = 8 bits)
-    const methodValue = this.encodingMethodToValue(header.encodingMethod);
-    const methodBits = BitOperations.numberToBits(methodValue, 8);
-    bits.push(...methodBits);
-
-    // Reserved (1 byte = 8 bits)
-    const reservedBits = BitOperations.numberToBits(header.reserved, 8);
-    bits.push(...reservedBits);
-
-    // Verify total header size
-    const expectedBits = this.getHeaderSizeInBits();
-    if (bits.length !== expectedBits) {
-      throw new Error(`Header serialization error: expected ${expectedBits} bits, got ${bits.length}`);
-    }
-
-    return bits;
+  if (messageLength > 0xffffffff) {
+    throw new Error('Message length exceeds maximum supported size (4GB)');
   }
 
-  /**
-   * Deserialize header from bit array
-   */
-  static deserializeHeader(bits: number[]): SteganographyHeader {
-    const expectedBits = this.getHeaderSizeInBits();
-    if (bits.length !== expectedBits) {
-      throw new Error(`Invalid header size: expected ${expectedBits} bits, got ${bits.length}`);
+  // Calculate checksum if message data is provided
+  let checksum = 0;
+  if (messageData) {
+    if (messageData.length !== messageLength) {
+      throw new Error('Message data length does not match specified length');
     }
-
-    let offset = 0;
-
-    // Magic signature (32 bits)
-    const magicBits = bits.slice(offset, offset + 32);
-    const magicSignature = BitOperations.bitsToNumber(magicBits);
-    offset += 32;
-
-    // Version (16 bits)
-    const versionBits = bits.slice(offset, offset + 16);
-    const version = BitOperations.bitsToNumber(versionBits);
-    offset += 16;
-
-    // Message length (32 bits)
-    const lengthBits = bits.slice(offset, offset + 32);
-    const messageLength = BitOperations.bitsToNumber(lengthBits);
-    offset += 32;
-
-    // Checksum (32 bits)
-    const checksumBits = bits.slice(offset, offset + 32);
-    const checksum = BitOperations.bitsToNumber(checksumBits);
-    offset += 32;
-
-    // Encoding method (8 bits)
-    const methodBits = bits.slice(offset, offset + 8);
-    const methodValue = BitOperations.bitsToNumber(methodBits);
-    const encodingMethod = this.valueToEncodingMethod(methodValue);
-    offset += 8;
-
-    // Reserved (8 bits)
-    const reservedBits = bits.slice(offset, offset + 8);
-    const reserved = BitOperations.bitsToNumber(reservedBits);
-
-    return {
-      magicSignature,
-      version,
-      messageLength,
-      checksum,
-      encodingMethod,
-      reserved,
-    };
+    checksum = calculateCRC32(messageData);
   }
 
-  /**
-   * Validate header integrity and compatibility
-   */
-  static validateHeader(header: SteganographyHeader): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
+  return {
+    magicSignature: MAGIC_SIGNATURE,
+    version: CURRENT_VERSION,
+    messageLength,
+    checksum,
+    encodingMethod,
+    reserved: 0, // Reserved for future use
+  };
+}
 
-    // Check magic signature
-    if (header.magicSignature !== this.MAGIC_SIGNATURE) {
-      errors.push(
-        `Invalid magic signature: expected ${this.MAGIC_SIGNATURE.toString(16)}, got ${header.magicSignature.toString(16)}`
-      );
-    }
+/**
+ * Serialize header to bit array for embedding
+ */
+export function serializeHeader(header: SteganographyHeader): number[] {
+  const bits: number[] = [];
 
-    // Check version compatibility
-    if (header.version > this.CURRENT_VERSION) {
-      errors.push(`Unsupported version: ${header.version} (current version: ${this.CURRENT_VERSION})`);
-    }
+  // Magic signature (4 bytes = 32 bits)
+  const magicBits = numberToBits(header.magicSignature, 32);
+  bits.push(...magicBits);
 
-    if (header.version < 1) {
-      errors.push(`Invalid version: ${header.version}`);
-    }
+  // Version (2 bytes = 16 bits)
+  const versionBits = numberToBits(header.version, 16);
+  bits.push(...versionBits);
 
-    // Check message length
-    if (header.messageLength < 0) {
-      errors.push(`Invalid message length: ${header.messageLength}`);
-    }
+  // Message length (4 bytes = 32 bits)
+  const lengthBits = numberToBits(header.messageLength, 32);
+  bits.push(...lengthBits);
 
-    if (header.messageLength > 0xffffffff) {
-      errors.push(`Message length too large: ${header.messageLength}`);
-    }
+  // Checksum (4 bytes = 32 bits)
+  const checksumBits = numberToBits(header.checksum, 32);
+  bits.push(...checksumBits);
 
-    // Check encoding method
-    if (!this.isValidEncodingMethod(header.encodingMethod)) {
-      errors.push(`Invalid encoding method: ${header.encodingMethod}`);
-    }
+  // Encoding method (1 byte = 8 bits)
+  const methodValue = encodingMethodToValue(header.encodingMethod);
+  const methodBits = numberToBits(methodValue, 8);
+  bits.push(...methodBits);
 
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+  // Reserved (1 byte = 8 bits)
+  const reservedBits = numberToBits(header.reserved, 8);
+  bits.push(...reservedBits);
+
+  // Verify total header size
+  const expectedBits = getHeaderSizeInBits();
+  if (bits.length !== expectedBits) {
+    throw new Error(`Header serialization error: expected ${expectedBits} bits, got ${bits.length}`);
   }
 
-  /**
-   * Verify message data matches header checksum
-   */
-  static verifyMessageIntegrity(header: SteganographyHeader, messageData: Uint8Array): boolean {
-    if (messageData.length !== header.messageLength) {
-      return false;
-    }
+  return bits;
+}
 
-    const calculatedChecksum = ChecksumUtility.calculateCRC32(messageData);
-    return calculatedChecksum === header.checksum;
+/**
+ * Deserialize header from bit array
+ */
+export function deserializeHeader(bits: number[]): SteganographyHeader {
+  const expectedBits = getHeaderSizeInBits();
+  if (bits.length !== expectedBits) {
+    throw new Error(`Invalid header size: expected ${expectedBits} bits, got ${bits.length}`);
   }
 
-  /**
-   * Get header size in bits
-   */
-  static getHeaderSizeInBits(): number {
-    return (
-      (HEADER_CONSTANTS.MAGIC_SIGNATURE_BYTES +
-        HEADER_CONSTANTS.VERSION_BYTES +
-        HEADER_CONSTANTS.MESSAGE_LENGTH_BYTES +
-        HEADER_CONSTANTS.CHECKSUM_BYTES +
-        HEADER_CONSTANTS.ENCODING_METHOD_BYTES +
-        HEADER_CONSTANTS.RESERVED_BYTES) *
-      CAPACITY_CONSTANTS.BITS_PER_BYTE
+  let offset = 0;
+
+  // Magic signature (32 bits)
+  const magicBits = bits.slice(offset, offset + 32);
+  const magicSignature = bitsToNumber(magicBits);
+  offset += 32;
+
+  // Version (16 bits)
+  const versionBits = bits.slice(offset, offset + 16);
+  const version = bitsToNumber(versionBits);
+  offset += 16;
+
+  // Message length (32 bits)
+  const lengthBits = bits.slice(offset, offset + 32);
+  const messageLength = bitsToNumber(lengthBits);
+  offset += 32;
+
+  // Checksum (32 bits)
+  const checksumBits = bits.slice(offset, offset + 32);
+  const checksum = bitsToNumber(checksumBits);
+  offset += 32;
+
+  // Encoding method (8 bits)
+  const methodBits = bits.slice(offset, offset + 8);
+  const methodValue = bitsToNumber(methodBits);
+  const encodingMethod = valueToEncodingMethod(methodValue);
+  offset += 8;
+
+  // Reserved (8 bits)
+  const reservedBits = bits.slice(offset, offset + 8);
+  const reserved = bitsToNumber(reservedBits);
+
+  return {
+    magicSignature,
+    version,
+    messageLength,
+    checksum,
+    encodingMethod,
+    reserved,
+  };
+}
+
+/**
+ * Validate header integrity and compatibility
+ */
+export function validateHeader(header: SteganographyHeader): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Check magic signature
+  if (header.magicSignature !== MAGIC_SIGNATURE) {
+    errors.push(
+      `Invalid magic signature: expected ${MAGIC_SIGNATURE.toString(16)}, got ${header.magicSignature.toString(16)}`
     );
   }
 
-  /**
-   * Get header size in bytes
-   */
-  static getHeaderSizeInBytes(): number {
-    return this.getHeaderSizeInBits() / CAPACITY_CONSTANTS.BITS_PER_BYTE;
+  // Check version compatibility
+  if (header.version > CURRENT_VERSION) {
+    errors.push(`Unsupported version: ${header.version} (current version: ${CURRENT_VERSION})`);
   }
 
-  /**
-   * Convert encoding method to numeric value for serialization
-   */
-  private static encodingMethodToValue(method: EncodingMethod): number {
-    switch (method) {
-      case 'simple-lsb':
-        return 1;
-      case 'triple-redundancy':
-        return 2;
-      case 'adaptive-lsb':
-        return 3;
-      default:
-        throw new Error(`Unknown encoding method: ${method}`);
-    }
+  if (header.version < 1) {
+    errors.push(`Invalid version: ${header.version}`);
   }
 
-  /**
-   * Convert numeric value to encoding method
-   */
-  private static valueToEncodingMethod(value: number): EncodingMethod {
-    switch (value) {
-      case 1:
-        return 'simple-lsb';
-      case 2:
-        return 'triple-redundancy';
-      case 3:
-        return 'adaptive-lsb';
-      default:
-        throw new Error(`Unknown encoding method value: ${value}`);
-    }
+  // Check message length
+  if (header.messageLength < 0) {
+    errors.push(`Invalid message length: ${header.messageLength}`);
   }
 
-  /**
-   * Check if encoding method is valid
-   */
-  private static isValidEncodingMethod(method: EncodingMethod): boolean {
-    return ['simple-lsb', 'triple-redundancy', 'adaptive-lsb'].includes(method);
+  if (header.messageLength > 0xffffffff) {
+    errors.push(`Message length too large: ${header.messageLength}`);
   }
 
-  /**
-   * Create a header with automatic checksum calculation
-   */
-  static createHeaderWithChecksum(messageData: Uint8Array, encodingMethod: EncodingMethod): SteganographyHeader {
-    return this.createHeader(messageData.length, encodingMethod, messageData);
+  // Check encoding method
+  if (!isValidEncodingMethod(header.encodingMethod)) {
+    errors.push(`Invalid encoding method: ${header.encodingMethod}`);
   }
 
-  /**
-   * Parse and validate header from bit array with comprehensive error checking
-   */
-  static parseAndValidateHeader(bits: number[]): { header?: SteganographyHeader; isValid: boolean; errors: string[] } {
-    try {
-      const header = this.deserializeHeader(bits);
-      const validation = this.validateHeader(header);
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
 
+/**
+ * Verify message data matches header checksum
+ */
+export function verifyMessageIntegrity(header: SteganographyHeader, messageData: Uint8Array): boolean {
+  if (messageData.length !== header.messageLength) {
+    return false;
+  }
+
+  const calculatedChecksum = calculateCRC32(messageData);
+  return calculatedChecksum === header.checksum;
+}
+
+/**
+ * Get header size in bits
+ */
+export function getHeaderSizeInBits(): number {
+  return (
+    32 + // Magic signature
+    16 + // Version
+    32 + // Message length
+    32 + // Checksum
+    8 + // Encoding method
+    8 // Reserved
+  ); // Total: 128 bits
+}
+
+/**
+ * Get header size in bytes
+ */
+export function getHeaderSizeInBytes(): number {
+  return getHeaderSizeInBits() / CAPACITY_CONSTANTS.BITS_PER_BYTE;
+}
+
+/**
+ * Convert encoding method to numeric value for serialization
+ */
+function encodingMethodToValue(method: EncodingMethod): number {
+  switch (method) {
+    case 'simple-lsb':
+      return 0;
+    case 'triple-redundancy':
+      return 1;
+    default:
+      throw new Error(`Unsupported encoding method: ${method}`);
+  }
+}
+
+/**
+ * Convert numeric value to encoding method for deserialization
+ */
+function valueToEncodingMethod(value: number): EncodingMethod {
+  switch (value) {
+    case 0:
+      return 'simple-lsb';
+    case 1:
+      return 'triple-redundancy';
+    default:
+      throw new Error(`Invalid encoding method value: ${value}`);
+  }
+}
+
+/**
+ * Validate encoding method
+ */
+function isValidEncodingMethod(method: EncodingMethod): boolean {
+  return method === 'simple-lsb' || method === 'triple-redundancy';
+}
+
+/**
+ * Create header with calculated checksum
+ */
+export function createHeaderWithChecksum(messageData: Uint8Array, encodingMethod: EncodingMethod): SteganographyHeader {
+  return createHeader(messageData.length, encodingMethod, messageData);
+}
+
+/**
+ * Parse and validate header from bits
+ */
+export function parseAndValidateHeader(bits: number[]): {
+  header?: SteganographyHeader;
+  isValid: boolean;
+  errors: string[];
+} {
+  try {
+    const header = deserializeHeader(bits);
+    const validation = validateHeader(header);
+
+    if (validation.isValid) {
       return {
-        header: validation.isValid ? header : undefined,
-        isValid: validation.isValid,
+        header,
+        isValid: true,
+        errors: [],
+      };
+    } else {
+      return {
+        header,
+        isValid: false,
         errors: validation.errors,
       };
-    } catch (error) {
-      return {
-        header: undefined,
-        isValid: false,
-        errors: [error instanceof Error ? error.message : 'Unknown parsing error'],
-      };
     }
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: [error instanceof Error ? error.message : 'Unknown parsing error'],
+    };
   }
+}
 
-  /**
-   * Calculate header overhead for capacity planning
-   */
-  static calculateHeaderOverhead(encodingMethod: EncodingMethod): number {
-    const headerBits = this.getHeaderSizeInBits();
+/**
+ * Calculate header overhead for capacity planning
+ */
+export function calculateHeaderOverhead(encodingMethod: EncodingMethod): number {
+  const headerBits = getHeaderSizeInBits();
 
-    // Apply encoding method overhead
-    switch (encodingMethod) {
-      case 'simple-lsb':
-        return headerBits; // 1:1 ratio
-      case 'triple-redundancy':
-        return headerBits * 3; // 1:3 ratio
-      case 'adaptive-lsb':
-        return headerBits; // Assumes simple LSB for header
-      default:
-        return headerBits;
-    }
-  }
+  // For triple redundancy, header bits are also stored with redundancy
+  const redundancyFactor = encodingMethod === 'triple-redundancy' ? 3 : 1;
 
-  /**
-   * Extract header information as human-readable summary
-   */
-  static summarizeHeader(header: SteganographyHeader): string {
-    return `MischiefMaker Header v${header.version}:
-- Message Length: ${header.messageLength} bytes
-- Encoding Method: ${header.encodingMethod}
-- Checksum: 0x${header.checksum.toString(16).toUpperCase()}
-- Magic: 0x${header.magicSignature.toString(16).toUpperCase()}
-- Reserved: ${header.reserved}`;
-  }
+  return headerBits * redundancyFactor;
+}
 
-  /**
-   * Compare two headers for equality
-   */
-  static headersEqual(header1: SteganographyHeader, header2: SteganographyHeader): boolean {
-    return (
-      header1.magicSignature === header2.magicSignature &&
-      header1.version === header2.version &&
-      header1.messageLength === header2.messageLength &&
-      header1.checksum === header2.checksum &&
-      header1.encodingMethod === header2.encodingMethod &&
-      header1.reserved === header2.reserved
-    );
-  }
+/**
+ * Create human-readable summary of header
+ */
+export function summarizeHeader(header: SteganographyHeader): string {
+  return `Header: ${header.messageLength} bytes, ${header.encodingMethod} encoding, checksum: ${header.checksum.toString(16)}`;
+}
+
+/**
+ * Compare two headers for equality
+ */
+export function headersEqual(header1: SteganographyHeader, header2: SteganographyHeader): boolean {
+  return (
+    header1.magicSignature === header2.magicSignature &&
+    header1.version === header2.version &&
+    header1.messageLength === header2.messageLength &&
+    header1.checksum === header2.checksum &&
+    header1.encodingMethod === header2.encodingMethod &&
+    header1.reserved === header2.reserved
+  );
 }

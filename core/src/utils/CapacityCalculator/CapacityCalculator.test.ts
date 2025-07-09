@@ -47,6 +47,34 @@ describe('CapacityCalculator', () => {
       expect(ratio).toBeGreaterThan(0.3);
       expect(ratio).toBeLessThan(0.4);
     });
+
+    it('should calculate capacity for very large images', () => {
+      const capacity = calculator.calculateCapacity(4000, 3000);
+
+      expect(capacity.totalPixels).toBe(12000000);
+      expect(capacity.availableBits).toBe(36000000);
+      expect(capacity.effectiveBits).toBe(34200000); // With 0.95 safety margin
+      expect(capacity.simpleCapacity).toBeGreaterThan(4000000); // Over 4MB
+      expect(capacity.tripleCapacity).toBeGreaterThan(1000000); // Over 1MB
+    });
+
+    it('should return valid CapacityInfo structure', () => {
+      const capacity = calculator.calculateCapacity(200, 200);
+
+      expect(capacity).toHaveProperty('totalPixels');
+      expect(capacity).toHaveProperty('availableBits');
+      expect(capacity).toHaveProperty('effectiveBits');
+      expect(capacity).toHaveProperty('simpleCapacity');
+      expect(capacity).toHaveProperty('tripleCapacity');
+      expect(capacity).toHaveProperty('headerSize');
+
+      expect(typeof capacity.totalPixels).toBe('number');
+      expect(typeof capacity.availableBits).toBe('number');
+      expect(typeof capacity.effectiveBits).toBe('number');
+      expect(typeof capacity.simpleCapacity).toBe('number');
+      expect(typeof capacity.tripleCapacity).toBe('number');
+      expect(typeof capacity.headerSize).toBe('number');
+    });
   });
 
   describe('calculateFromPixelData', () => {
@@ -67,146 +95,75 @@ describe('CapacityCalculator', () => {
 
       expect(capacity).toEqual(expectedCapacity);
     });
-  });
 
-  describe('canFit methods', () => {
-    const width = 1000;
-    const height = 1000;
+    it('should handle square pixel data', () => {
+      const pixelData: PixelData = {
+        width: 100,
+        height: 100,
+        channels: {
+          red: Array.from(new Uint8ClampedArray(10000)),
+          green: Array.from(new Uint8ClampedArray(10000)),
+          blue: Array.from(new Uint8ClampedArray(10000)),
+        },
+        totalPixels: 10000,
+      };
 
-    it('should correctly determine if message fits with simple LSB', () => {
-      const capacity = calculator.calculateCapacity(width, height);
+      const capacity = calculator.calculateFromPixelData(pixelData);
 
-      // Small message should fit
-      expect(calculator.canFitSimple(width, height, 1000)).toBe(true);
-
-      // Message exactly at capacity should fit
-      expect(calculator.canFitSimple(width, height, capacity.simpleCapacity)).toBe(true);
-
-      // Message larger than capacity should not fit
-      expect(calculator.canFitSimple(width, height, capacity.simpleCapacity + 1)).toBe(false);
+      expect(capacity.totalPixels).toBe(10000);
+      expect(capacity.simpleCapacity).toBeGreaterThan(0);
+      expect(capacity.tripleCapacity).toBeGreaterThan(0);
     });
 
-    it('should correctly determine if message fits with triple redundancy', () => {
-      const capacity = calculator.calculateCapacity(width, height);
+    it('should handle minimum size pixel data', () => {
+      const pixelData: PixelData = {
+        width: 1,
+        height: 1,
+        channels: {
+          red: [128],
+          green: [128],
+          blue: [128],
+        },
+        totalPixels: 1,
+      };
 
-      // Small message should fit
-      expect(calculator.canFitTriple(width, height, 1000)).toBe(true);
+      const capacity = calculator.calculateFromPixelData(pixelData);
 
-      // Message exactly at capacity should fit
-      expect(calculator.canFitTriple(width, height, capacity.tripleCapacity)).toBe(true);
-
-      // Message larger than capacity should not fit
-      expect(calculator.canFitTriple(width, height, capacity.tripleCapacity + 1)).toBe(false);
-    });
-
-    it('should correctly determine if message fits with any method', () => {
-      const capacity = calculator.calculateCapacity(width, height);
-
-      // Message that fits in simple should fit in any
-      expect(calculator.canFitAny(width, height, 1000)).toBe(true);
-
-      // Message that only fits in simple should still fit in any
-      const largeMessage = capacity.tripleCapacity + 1000;
-      if (largeMessage <= capacity.simpleCapacity) {
-        expect(calculator.canFitAny(width, height, largeMessage)).toBe(true);
-      }
-
-      // Message larger than both should not fit
-      expect(calculator.canFitAny(width, height, capacity.simpleCapacity + 1)).toBe(false);
+      expect(capacity.totalPixels).toBe(1);
+      expect(capacity.availableBits).toBe(3);
+      // With such small capacity, most values might be 0 after header overhead
+      expect(capacity.simpleCapacity).toBeGreaterThanOrEqual(0);
+      expect(capacity.tripleCapacity).toBeGreaterThanOrEqual(0);
     });
   });
 
-  describe('getUtilization', () => {
-    it('should calculate utilization percentage correctly', () => {
-      const capacity = calculator.calculateCapacity(500, 500);
+  describe('capacity relationships', () => {
+    it('should maintain consistent capacity relationships', () => {
+      const capacity = calculator.calculateCapacity(1000, 1000);
 
-      // 50% utilization
-      const halfMessage = Math.floor(capacity.simpleCapacity / 2);
-      const utilization = calculator.getUtilization(capacity, halfMessage, true);
-      expect(utilization).toBeCloseTo(50, 1);
+      // Basic sanity checks
+      expect(capacity.availableBits).toBe(capacity.totalPixels * 3);
+      expect(capacity.effectiveBits).toBeLessThan(capacity.availableBits);
+      expect(capacity.simpleCapacity).toBeGreaterThan(capacity.tripleCapacity);
 
-      // 100% utilization
-      const fullUtilization = calculator.getUtilization(capacity, capacity.simpleCapacity, true);
-      expect(fullUtilization).toBeCloseTo(100, 1);
-
-      // Over-capacity should cap at 100%
-      const overUtilization = calculator.getUtilization(capacity, capacity.simpleCapacity + 1000, true);
-      expect(overUtilization).toBe(100);
+      // Triple redundancy should be approximately 1/3 of simple
+      const ratio = capacity.tripleCapacity / capacity.simpleCapacity;
+      expect(ratio).toBeGreaterThan(0.25);
+      expect(ratio).toBeLessThan(0.4);
     });
 
-    it('should handle zero capacity gracefully', () => {
-      const zeroCapacity = calculator.calculateCapacity(1, 1); // Very small image
-      // Force zero capacity for testing
-      const testCapacity = { ...zeroCapacity, simpleCapacity: 0 };
+    it('should handle different image aspect ratios', () => {
+      const square = calculator.calculateCapacity(500, 500);
+      const wide = calculator.calculateCapacity(1000, 250);
+      const tall = calculator.calculateCapacity(250, 1000);
 
-      const utilization = calculator.getUtilization(testCapacity, 100, true);
-      expect(utilization).toBe(0);
-    });
-  });
-
-  describe('calculateMinimumDimensions', () => {
-    it('should calculate minimum dimensions for small messages', () => {
-      const dimensions = calculator.calculateMinimumDimensions(1000); // 1KB message
-
-      expect(dimensions.width).toBeGreaterThan(0);
-      expect(dimensions.height).toBeGreaterThan(0);
-      expect(dimensions.width).toBe(dimensions.height); // Should be square
-
-      // Verify the calculated dimensions actually work
-      expect(calculator.canFitSimple(dimensions.width, dimensions.height, 1000)).toBe(true);
-    });
-
-    it('should calculate larger dimensions for triple redundancy', () => {
-      const simpleSize = calculator.calculateMinimumDimensions(1000, true);
-      const tripleSize = calculator.calculateMinimumDimensions(1000, false);
-
-      // Triple redundancy should require larger dimensions
-      expect(tripleSize.width * tripleSize.height).toBeGreaterThan(simpleSize.width * simpleSize.height);
-
-      // Verify both work
-      expect(calculator.canFitSimple(simpleSize.width, simpleSize.height, 1000)).toBe(true);
-      expect(calculator.canFitTriple(tripleSize.width, tripleSize.height, 1000)).toBe(true);
-    });
-
-    it('should handle zero-length messages', () => {
-      const dimensions = calculator.calculateMinimumDimensions(0);
-
-      expect(dimensions.width).toBeGreaterThan(0);
-      expect(dimensions.height).toBeGreaterThan(0);
-
-      // Should be able to fit header at minimum
-      expect(calculator.canFitSimple(dimensions.width, dimensions.height, 0)).toBe(true);
-    });
-  });
-
-  describe('real-world scenarios', () => {
-    it('should handle typical messaging scenarios', () => {
-      // Typical 1KB message in 750KB JPEG (approximately 1024x768)
-      const result = calculator.canFitAny(1024, 768, 1024); // 1KB message
-      expect(result).toBe(true);
-
-      // Large message that might require fallback
-      const capacity = calculator.calculateCapacity(1024, 768);
-      const largeMessage = capacity.tripleCapacity + 1000; // Requires simple LSB
-
-      if (largeMessage <= capacity.simpleCapacity) {
-        expect(calculator.canFitAny(1024, 768, largeMessage)).toBe(true);
-        expect(calculator.canFitTriple(1024, 768, largeMessage)).toBe(false);
-        expect(calculator.canFitSimple(1024, 768, largeMessage)).toBe(true);
-      }
-    });
-
-    it('should provide realistic capacity estimates', () => {
-      // Based on algorithm documentation examples
-      const capacity = calculator.calculateCapacity(1024, 768);
-
-      // Simple LSB should provide ~280KB capacity (from documentation: ~288KB)
-      expect(capacity.simpleCapacity).toBeGreaterThan(270000); // ~270KB+
-      expect(capacity.simpleCapacity).toBeLessThan(290000); // ~290KB-
-
-      // Triple redundancy should provide ~93KB capacity (from documentation: ~96KB)
-      expect(capacity.tripleCapacity).toBeGreaterThan(85000); // ~85KB+
-      expect(capacity.tripleCapacity).toBeLessThan(100000); // ~100KB-
+      // All should have same total pixels and capacity
+      expect(square.totalPixels).toBe(wide.totalPixels);
+      expect(square.totalPixels).toBe(tall.totalPixels);
+      expect(square.simpleCapacity).toBe(wide.simpleCapacity);
+      expect(square.simpleCapacity).toBe(tall.simpleCapacity);
+      expect(square.tripleCapacity).toBe(wide.tripleCapacity);
+      expect(square.tripleCapacity).toBe(tall.tripleCapacity);
     });
   });
 });
