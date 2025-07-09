@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CapacityCalculator } from './CapacityCalculator';
-import type { PixelData } from '../types/DataTypes';
+import type { PixelData } from '../../types/PixelData';
 
 describe('CapacityCalculator', () => {
   const calculator = new CapacityCalculator();
@@ -54,9 +54,12 @@ describe('CapacityCalculator', () => {
       const pixelData: PixelData = {
         width: 200,
         height: 150,
-        red: new Uint8ClampedArray(30000),
-        green: new Uint8ClampedArray(30000),
-        blue: new Uint8ClampedArray(30000),
+        channels: {
+          red: Array.from(new Uint8ClampedArray(30000)),
+          green: Array.from(new Uint8ClampedArray(30000)),
+          blue: Array.from(new Uint8ClampedArray(30000)),
+        },
+        totalPixels: 30000,
       };
 
       const capacity = calculator.calculateFromPixelData(pixelData);

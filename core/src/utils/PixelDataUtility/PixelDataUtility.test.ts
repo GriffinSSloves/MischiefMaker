@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PixelDataUtility } from './PixelDataUtility';
-import type { PixelData } from '../types/DataTypes';
+import type { PixelData } from '../../types/PixelData';
 
 describe('PixelDataUtility', () => {
   // Test data - 2x2 image

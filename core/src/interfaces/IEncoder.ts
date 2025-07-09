@@ -1,4 +1,5 @@
-import type { PixelData, SteganographyHeader } from '../types/DataTypes';
+import type { PixelData } from '../types/PixelData';
+import type { SteganographyHeader } from '../types/SteganographyHeader';
 import type { LSBConfig } from '../types/AlgorithmTypes';
 
 /**

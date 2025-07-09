@@ -294,7 +294,7 @@ interface ImageProcessor {
       quality: number;
       maxSize: number;
       maxDimensions: number;
-    },
+    }
   ): Promise<Buffer>;
 
   // Load JPEG as RGB pixel array

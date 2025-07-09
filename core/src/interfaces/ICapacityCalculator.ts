@@ -1,4 +1,5 @@
-import type { CapacityInfo, PixelData } from '../types/DataTypes';
+import type { CapacityInfo } from '../types/CapacityInfo';
+import type { PixelData } from '../types/PixelData';
 
 /**
  * Interface for calculating message capacity in images

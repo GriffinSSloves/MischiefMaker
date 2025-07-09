@@ -1,5 +1,5 @@
-import { BitOperations } from './BitOperations';
-import { CAPACITY_CONSTANTS } from '../types/Constants';
+import { BitOperations } from '../BitOperations/BitOperations';
+import { CAPACITY_CONSTANTS } from '../../types/Constants';
 
 /**
  * Utility class for calculating and verifying checksums in steganography operations

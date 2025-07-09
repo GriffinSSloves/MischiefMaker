@@ -28,9 +28,6 @@ export interface AlgorithmConfig {
   /** Whether to use compression before encoding */
   useCompression: boolean;
 
-  /** Preferred encoding method */
-  preferredMethod: EncodingMethod;
-
   /** Magic signature for MischiefMaker identification */
   magicSignature: number;
 

@@ -1,6 +1,6 @@
-import type { PixelData } from '../types/DataTypes';
-import { BitOperations } from './BitOperations';
-import { ALGORITHM_CONSTANTS } from '../types/Constants';
+import type { PixelData } from '../../types/PixelData';
+import { BitOperations } from '../BitOperations/BitOperations';
+import { ALGORITHM_CONSTANTS } from '../../types/Constants';
 
 /**
  * Utility class for pixel data manipulation in steganography operations

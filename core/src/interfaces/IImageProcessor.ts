@@ -1,5 +1,5 @@
 import type { CompressionOptions } from '../types/AlgorithmTypes';
-import type { PixelData } from '../types/DataTypes';
+import type { PixelData } from '../types/PixelData';
 
 /**
  * Minimal interface for image processing operations

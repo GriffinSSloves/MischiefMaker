@@ -1,5 +1,5 @@
-import type { BitOperation } from '../types/DataTypes';
-import { ALGORITHM_CONSTANTS, CAPACITY_CONSTANTS } from '../types/Constants';
+import type { BitOperation } from '../../types/BitOperation';
+import { ALGORITHM_CONSTANTS, CAPACITY_CONSTANTS } from '../../types/Constants';
 
 /**
  * Utility class for bit manipulation operations in steganography

@@ -16,6 +16,10 @@ export const ALGORITHM_CONSTANTS: AlgorithmConfig = {
   lsbDepth: 1, // 1 LSB per channel for maximum invisibility
   redundancyFactor: 3, // Triple encoding for fallback reliability
 
+  // Capacity and compression settings
+  safetyMargin: 0.95, // 95% safety margin for capacity calculations
+  useCompression: false, // Disable compression for maximum compatibility
+
   // MischiefMaker identification
   magicSignature: 0x4d534348, // "MSCH" in hex
   currentVersion: 1, // Algorithm version for compatibility

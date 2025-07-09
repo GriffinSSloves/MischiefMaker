@@ -1,6 +1,8 @@
-import type { CapacityInfo, PixelData } from '../types/DataTypes';
-import type { ICapacityCalculator } from '../interfaces/ICapacityCalculator';
-import { HEADER_CONSTANTS, CAPACITY_CONSTANTS, ALGORITHM_CONSTANTS } from '../types/Constants';
+import type { CapacityInfo } from '../../types/CapacityInfo';
+import type { PixelData } from '../../types/PixelData';
+import type { ICapacityCalculator } from '../../interfaces/ICapacityCalculator';
+import { CAPACITY_CONSTANTS, ALGORITHM_CONSTANTS } from '../../types/Constants';
+import { HeaderUtility } from '../HeaderUtility/HeaderUtility';
 
 /**
  * Calculates message capacity for steganography operations
@@ -29,14 +31,8 @@ export class CapacityCalculator implements ICapacityCalculator {
     // Apply safety margin to account for image characteristics
     const effectiveBits = Math.floor(availableBits * safetyMargin);
 
-    // Header overhead (magic signature, version, length, checksum, method, reserved)
-    const headerSize =
-      HEADER_CONSTANTS.MAGIC_SIGNATURE_BYTES +
-      HEADER_CONSTANTS.VERSION_BYTES +
-      HEADER_CONSTANTS.MESSAGE_LENGTH_BYTES +
-      HEADER_CONSTANTS.CHECKSUM_BYTES +
-      HEADER_CONSTANTS.ENCODING_METHOD_BYTES +
-      HEADER_CONSTANTS.RESERVED_BYTES;
+    // Header overhead using HeaderUtility
+    const headerSize = HeaderUtility.getHeaderSizeInBytes();
 
     // Calculate capacity for different encoding methods
     // Simple LSB: uses all available bits (1:1 ratio)
@@ -106,15 +102,8 @@ export class CapacityCalculator implements ICapacityCalculator {
     const safetyMargin = CAPACITY_CONSTANTS.SAFETY_MARGIN;
     const redundancyFactor = useSimple ? 1 : ALGORITHM_CONSTANTS.redundancyFactor;
 
-    // Calculate header size in bits
-    const headerSize =
-      (HEADER_CONSTANTS.MAGIC_SIGNATURE_BYTES +
-        HEADER_CONSTANTS.VERSION_BYTES +
-        HEADER_CONSTANTS.MESSAGE_LENGTH_BYTES +
-        HEADER_CONSTANTS.CHECKSUM_BYTES +
-        HEADER_CONSTANTS.ENCODING_METHOD_BYTES +
-        HEADER_CONSTANTS.RESERVED_BYTES) *
-      bitsPerByte;
+    // Calculate header size in bits using HeaderUtility
+    const headerSize = HeaderUtility.getHeaderSizeInBits();
 
     // Total bits needed (message + header) with redundancy
     const totalBitsNeeded = (messageLength * bitsPerByte + headerSize) * redundancyFactor;

@@ -1,5 +1,5 @@
 import type { EncodingMethod } from './AlgorithmTypes';
-import type { CapacityInfo } from './DataTypes';
+import type { CapacityInfo } from './CapacityInfo';
 
 /**
  * Enhanced result of an encoding operation

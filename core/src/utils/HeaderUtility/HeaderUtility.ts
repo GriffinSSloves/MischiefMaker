@@ -1,8 +1,8 @@
-import type { SteganographyHeader } from '../types/DataTypes';
-import type { EncodingMethod } from '../types/AlgorithmTypes';
-import { BitOperations } from './BitOperations';
-import { ChecksumUtility } from './ChecksumUtility';
-import { HEADER_CONSTANTS, CAPACITY_CONSTANTS } from '../types/Constants';
+import type { SteganographyHeader } from '../../types/SteganographyHeader';
+import type { EncodingMethod } from '../../types/AlgorithmTypes';
+import { BitOperations } from '../BitOperations/BitOperations';
+import { ChecksumUtility } from '../ChecksumUtility/ChecksumUtility';
+import { HEADER_CONSTANTS, CAPACITY_CONSTANTS } from '../../types/Constants';
 
 /**
  * Utility class for creating and parsing steganography headers
