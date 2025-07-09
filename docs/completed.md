@@ -61,6 +61,112 @@ This document tracks tasks that have been completed during the MischiefMaker pro
 
 ## 2025-01-27
 
+### ✅ Core Utility Foundation Implementation
+
+**Task**: Implement comprehensive steganography utility classes with full test coverage and documentation
+
+**Status**: **COMPLETED** ✅
+
+**Summary**: Implemented the complete foundation layer for steganography operations with 5 major utility classes and 160 comprehensive tests:
+
+**1. CapacityCalculator (15 tests)**
+
+- Calculates steganography capacity for both Simple LSB and Triple Redundancy methods
+- Provides capacity validation, minimum dimension calculation, and utilization metrics
+- Handles real-world scenarios with safety margins and header overhead calculations
+- Supports capacity-based image dimension recommendations
+
+**2. BitOperations (32 tests)**
+
+- LSB extraction and insertion operations for steganography
+- Comprehensive bit array conversions (byte↔bits, string↔bits, number↔bits)
+- Triple redundancy encoding/decoding with majority voting error correction
+- Corruption rate calculation and validation functions
+- XOR operations and checksum calculations with BitOperation record creation
+
+**3. ChecksumUtility (36 tests)**
+
+- Multiple checksum algorithms: CRC32, Adler-32, Fletcher-16, XOR
+- Algorithm recommendations based on data size and accuracy requirements
+- Verification methods for all supported algorithms with comprehensive validation
+- Multiple checksum validation for enhanced security
+- Support for string, byte array, and bit array inputs
+
+**4. HeaderUtility (36 tests)**
+
+- Creates and parses steganography headers with "MSCH" magic signature
+- Complete serialization/deserialization to/from bit arrays
+- Comprehensive validation (magic signature, version compatibility, encoding method)
+- Message integrity verification using CRC32 checksums
+- Header overhead calculation for capacity planning with human-readable summaries
+
+**5. PixelDataUtility (39 tests)**
+
+- Pixel data extraction from RGB/RGBA formats with channel-based structure
+- Conversion between different pixel data formats
+- LSB steganography bit embedding and extraction for simple and triple redundancy
+- Triple redundancy encoding with error correction and majority voting
+- Capacity calculations and validation with pixel manipulation utilities
+- Difference mapping for debugging steganography changes and statistics calculation
+
+**Technical Architecture:**
+
+- Platform-agnostic design using only standard JavaScript features
+- Interface-driven architecture with I-prefixed interfaces [[memory:2751819]]
+- Direct imports avoiding internal index.ts redirections [[memory:2751819]]
+- Dependency injection for platform-specific operations
+- TypeScript strict mode with explicit return types and comprehensive JSDoc
+
+**Quality Metrics:**
+
+- 160 tests passing across 6 test files with zero failures
+- Zero ESLint warnings or TypeScript errors
+- Co-located test files with source code following modern patterns
+- Comprehensive error handling with custom error classes
+
+**Outcome**: Solid foundation ready for building higher-level encoding/decoding interfaces. The core library provides all essential steganography operations with excellent test coverage and follows modern TypeScript best practices.
+
+**Files Created/Modified**:
+
+- `core/src/utils/CapacityCalculator.ts` & `.test.ts` - Capacity calculation utilities
+- `core/src/utils/BitOperations.ts` & `.test.ts` - Bit manipulation and redundancy operations
+- `core/src/utils/ChecksumUtility.ts` & `.test.ts` - Multiple checksum algorithms
+- `core/src/utils/HeaderUtility.ts` & `.test.ts` - Header creation and parsing
+- `core/src/utils/PixelDataUtility.ts` & `.test.ts` - Pixel data manipulation
+- `core/src/types/DataTypes.ts` - Enhanced with PixelData channel structure
+- `core/src/types/AlgorithmTypes.ts` - Updated encoding methods and configuration
+- `core/src/index.ts` - Updated exports for all new utilities
+
+---
+
+### ✅ Documentation Architecture Restructuring
+
+**Task**: Split architecture.md into focused system design and separate coding standards documentation
+
+**Status**: **COMPLETED** ✅
+
+**Summary**: Restructured project documentation for better organization and maintainability:
+
+- **Architecture Split**: Separated `docs/architecture.md` into focused system design content
+- **Coding Standards**: Created `docs/codingStandards.md` with comprehensive development guidelines:
+  - Interface naming conventions (I-prefixed interfaces) [[memory:2751819]]
+  - Import conventions (direct imports, avoid index.ts redirections) [[memory:2751819]]
+  - Separation of concerns and code organization strategies
+  - Error handling patterns and testing standards
+  - Type safety requirements and performance considerations
+- **Documentation Updates**: Updated main README.md to reference new coding standards
+- **Content Organization**: Maintained clear separation between architectural decisions and implementation guidelines
+
+**Outcome**: Better structured documentation that separates high-level system design from day-to-day coding practices, making both more accessible and maintainable.
+
+**Files Modified**:
+
+- `docs/architecture.md` - Focused on system design and technical architecture
+- `docs/codingStandards.md` - New file with comprehensive coding guidelines
+- `README.md` - Updated documentation references
+
+---
+
 ### ✅ Modern Router Architecture Implementation
 
 **Task**: Move router code from App.tsx to dedicated router module with modern React Router patterns and comprehensive testing

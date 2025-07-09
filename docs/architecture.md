@@ -13,6 +13,7 @@ MischiefMaker is a cross-platform steganography application for hiding secret me
 3. **Modern Tooling**: Latest stable versions of React, Vite, and TailwindCSS
 4. **Modern Router Architecture**: React Router v7 with createBrowserRouter, lazy loading, and nested routes
 5. **Testing Strategy**: Vitest + React Testing Library for component and unit testing
+6. **Interface-Driven Design**: Platform abstraction through dependency injection with I-prefixed interfaces
 
 ### Web Application
 

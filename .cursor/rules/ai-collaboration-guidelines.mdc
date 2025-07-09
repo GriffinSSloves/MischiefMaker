@@ -38,9 +38,38 @@ These guidelines help AI assistants provide high-quality, consistent responses w
 - Only use sequential operations when output of one is required for input of next
 - This can make responses 3-5x faster
 
+## MischiefMaker Coding Standards
+
+### 5. Interface Naming Convention
+
+**All interfaces must start with `I`:**
+
+- `IImageProcessor`, `ISteganographyEngine`, `ICapacityCalculator`
+- This clearly distinguishes interfaces from classes and types
+- Apply consistently across all new interfaces
+
+### 6. Import Conventions
+
+**Use direct imports from source files:**
+
+- ✅ `import { PixelData } from '../types/DataTypes';`
+- ❌ `import { PixelData } from '../types';` (avoid internal index.ts)
+
+**Exception**: Main package `src/index.ts` is the public API entry point and required
+
+**Benefits**: Clearer code, explicit dependencies, easier refactoring
+
+### 7. Separation of Concerns
+
+**Keep complexity internal to engines:**
+
+- Users shouldn't choose encoding methods manually
+- Engines handle automatic method selection/detection
+- Results can show what happened, but users don't need to decide
+
 ## Algorithm and Technical Decision Standards
 
-### 5. Documentation Level Separation
+### 8. Documentation Level Separation
 
 **Maintain clear separation between high-level and detailed documentation:**
 
@@ -49,7 +78,7 @@ These guidelines help AI assistants provide high-quality, consistent responses w
 
 This keeps strategic documents focused and implementation details accessible.
 
-### 6. Combination Strategy Preference
+### 9. Combination Strategy Preference
 
 **When designing algorithms, consider combination approaches:**
 
@@ -57,7 +86,7 @@ This keeps strategic documents focused and implementation details accessible.
 - Method detection for proper handling, no user intervention required
 - Often provides better real-world performance than single-method approaches
 
-### 7. Simultaneous Documentation Updates
+### 10. Simultaneous Documentation Updates
 
 **When making significant algorithm decisions, update related documentation files simultaneously:**
 
@@ -66,13 +95,13 @@ This keeps strategic documents focused and implementation details accessible.
 
 ## Testing Standards
 
-### 8. Modern Testing Patterns
+### 11. Modern Testing Patterns
 
 - Create tests for any utilities you build
 - Ensure consistent testing patterns across similar components
 - Update web/README.md with testing utility usage examples
 
-### 9. Quality Gates
+### 12. Quality Gates
 
 - Run tests after changes to ensure nothing breaks
 - Follow zero-warning ESLint policy - fix all warnings
@@ -81,14 +110,14 @@ This keeps strategic documents focused and implementation details accessible.
 
 ## Communication Style
 
-### 10. Educational Explanations
+### 13. Educational Explanations
 
 - Explain the "why" before the "how"
 - Provide context and reasoning for technical decisions
 - Show before/after comparisons for improvements
 - Discuss trade-offs and alternatives when relevant
 
-### 11. Incremental & Validated Approach
+### 14. Incremental & Validated Approach
 
 - Build complex features step-by-step
 - Use parallel tool calls for efficiency when updating multiple files
@@ -97,12 +126,12 @@ This keeps strategic documents focused and implementation details accessible.
 
 ## Project-Specific Guidelines
 
-### 12. MischiefMaker Context
+### 15. MischiefMaker Context
 
 - **Tone**: Keep it fun and playful (per ADR-005) - tool for friends, not academic
 - **Architecture**: Follow monorepo structure (web/, mobile/, core/)
 
-### 13. Workflow Standards
+### 16. Workflow Standards
 
 - **Pre-commit mindset**: Format, lint, type-check, build before considering done
 - **Documentation coverage**: Every feature should be documented
@@ -111,14 +140,14 @@ This keeps strategic documents focused and implementation details accessible.
 
 ## Response Structure Requirements
 
-### 14. Effective Communication
+### 17. Effective Communication
 
 - Plan out loud - explain what you'll do before doing it
 - Use parallel tool calls when operations can be simultaneous
 - Validate results and confirm tests pass
 - Summarize impact and explain why changes matter
 
-### 15. Success Criteria
+### 18. Success Criteria
 
 Every response should aim for:
 

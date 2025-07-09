@@ -2,7 +2,7 @@
  * Minimal interface for file system operations
  * Abstracts platform-specific file handling (browser File API, native file system)
  */
-export interface FileSystem {
+export interface IFileSystem {
   /**
    * Read file as ArrayBuffer
    */
@@ -17,4 +17,14 @@ export interface FileSystem {
    * Check if file exists
    */
   exists(path: string): Promise<boolean>;
+
+  /**
+   * Get file size in bytes
+   */
+  getFileSize(path: string): Promise<number>;
+
+  /**
+   * Get file metadata
+   */
+  getFileInfo(path: string): Promise<{ size: number; lastModified: Date }>;
 }

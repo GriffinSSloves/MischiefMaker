@@ -11,11 +11,10 @@ Web application for sending secret messages through pictures using steganography
 - **ESLint & Prettier** - Code linting and formatting ✅
 - **pnpm** - Package manager ✅
 - **Vitest** - Test Framework ✅
-
 - **ShadCN UI** - Reusable component library ✅
 - **React Router Dom** - Client-side routing ✅
 
-## Pending Setup
+## Setup Status
 
 _All core web setup is now complete! Ready for steganography feature development._
 

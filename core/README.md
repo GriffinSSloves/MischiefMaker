@@ -9,6 +9,30 @@ Core steganography engine for MischiefMaker, designed to be platform-agnostic an
 - **ESLint** - Code linting
 - **Interface-driven design** - Platform abstraction through dependency injection
 
+## Coding Standards
+
+### Interface Naming Convention
+
+- **All interfaces must start with `I`** (e.g., `IImageProcessor`, `ISteganographyEngine`)
+- This clearly distinguishes interfaces from classes and types
+
+### Import Convention
+
+- **Avoid internal `index.ts` files** - import directly from source files
+- **Use explicit imports** to show exactly where types/interfaces come from
+
+```typescript
+// ✅ Good - direct imports
+import { PixelData } from '../types/DataTypes';
+import { ISteganographyEngine } from '../interfaces/ISteganographyEngine';
+
+// ❌ Avoid - internal index.ts redirections
+import { PixelData } from '../types';
+import { ISteganographyEngine } from '../interfaces';
+```
+
+**Exception**: The main `src/index.ts` is the **public API entry point** and is required for package exports.
+
 ## Architecture
 
 The core module follows clean architecture principles with well-defined interfaces to ensure cross-platform compatibility.
@@ -19,6 +43,7 @@ The core module follows clean architecture principles with well-defined interfac
 - **Dependency Injection**: Platform-specific clients are injected at runtime
 - **Minimal Interfaces**: Only essential functions exposed, extensible as needed
 - **Type Safety**: Full TypeScript support with comprehensive type definitions
+- **Automatic Method Selection**: Engine handles encoding method complexity transparently
 
 ## Project Structure
 

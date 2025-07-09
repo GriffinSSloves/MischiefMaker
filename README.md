@@ -16,9 +16,20 @@ pnpm run dev
 
 _Mobile setup coming soon_
 
+## Project Structure
+
+```
+/
+├── docs/                  # Project documentation
+├── web/                   # React web application
+├── mobile/                # React Native mobile app (planned)
+└── core/                  # Shared steganography
+```
+
 ## Documentation
 
 - **[Architecture](docs/architecture.md)** - System design and technical architecture
+- **[Coding Standards](docs/codingStandards.md)** - Code style, naming conventions, and best practices
 - **[Decision Records](docs/decisions.md)** - Key architectural and technology decisions
 - **[Algorithm Specification](core/docs/algorithm.md)** - LSB steganography algorithm design and implementation details
 - **[Image Technical Considerations](core/docs/image-technical-considerations.md)** - Detailed calculations, implementation examples, and technical deep-dive
@@ -36,13 +47,3 @@ _Mobile setup coming soon_
 - **[Web App](web/README.md)** - React web application setup and development
 - **Mobile App** - React Native setup (coming soon)
 - **[Core Library](core/README.md)** - Shared utilities and algorithms
-
-## Project Structure
-
-```
-/
-├── docs/                  # Project documentation
-├── web/                   # React web application
-├── mobile/                # React Native mobile app (planned)
-└── core/                  # Shared steganography
-```
