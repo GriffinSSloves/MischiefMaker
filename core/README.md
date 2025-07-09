@@ -47,25 +47,25 @@ The core module follows clean architecture principles with well-defined interfac
 
 ## Project Structure
 
+Example files, does not reflect all current files.
+
 ```
 core/
 ├── README.md
 ├── package.json
 ├── src/
 │   ├── interfaces/           # Abstract interfaces for platform dependencies
+│   │   ├── FileSystem.ts
 │   │   ├── ImageProcessor.ts
-│   │   └── FileSystem.ts
-│   ├── services/            # Core steganography services
-│   │   └── SteganographyService.ts
-│   ├── algorithms/          # Steganography algorithm implementations
-│   │   ├── LSBEncoder.ts
-│   │   └── LSBDecoder.ts
-│   ├── models/              # Data models and types
-│   │   ├── SteganographyOptions.ts
-│   │   └── ProcessingResult.ts
-│   └── errors/              # Custom error types
-│       └── SteganographyError.ts
-└── tests/                   # Test files
+│   ├── types/               # Type definitions (atomized into individual files)
+│   │   ├── SteganographyHeader.ts
+│   │   ├── PixelData.ts
+│   ├── utils/               # Utility classes (each in own folder)
+│   │   ├── BitOperations/
+│   │   │   ├── BitOperations.ts
+│   │   │   └── BitOperations.test.ts
+│   └── algorithms/          # Algorithm implementations (planned)
+│       └── utils/
 ```
 
 ## Technical Documentation
