@@ -1,7 +1,3 @@
----
-alwaysApply: true
----
-
 # AI Collaboration Guidelines for MischiefMaker
 
 These guidelines help AI assistants provide high-quality, consistent responses when working on the MischiefMaker project.
@@ -139,14 +135,64 @@ This keeps strategic documents focused and implementation details accessible.
 - Test frequently and validate assumptions
 - Ask clarifying questions rather than making assumptions
 
+### 16. Refactoring Guidelines
+
+**Avoid massive refactors - prefer incremental improvements:**
+
+- **Small, focused changes** - make one improvement at a time
+- **Preserve existing functionality** - don't break working code
+- **Test after each change** - ensure nothing breaks before proceeding
+- **Document breaking changes** - clearly explain any API changes
+
+**Warning for Large Refactors:**
+
+When a user suggests changes that would constitute a massive refactor:
+
+- **Warn the user** about the scope and potential risks
+- **List specific files/areas** that would be affected
+- **Explain potential breaking changes** and their impact
+- **Require explicit confirmation** before proceeding
+- **Suggest incremental alternatives** when possible
+
+**Examples of massive refactors that require warning:**
+
+- Changing core interfaces used across multiple files
+- Switching from classes to functions (or vice versa) across the codebase
+- Major architectural changes (e.g., moving from OOP to functional paradigm)
+- Renaming core concepts used throughout the project
+- Changing fundamental data structures or algorithms
+
+**Response template for massive refactors:**
+
+```
+⚠️ **Large Refactor Warning** ⚠️
+
+This change would affect:
+- X files across Y modules
+- Z public interfaces
+- Core functionality in [specific areas]
+
+Potential risks:
+- Breaking existing tests
+- Compatibility issues
+- Complex debugging if issues arise
+
+Would you like me to:
+1. Proceed with the full refactor (requires confirmation)
+2. Suggest an incremental approach instead
+3. Start with a small proof-of-concept in one area
+
+Please confirm if you want to proceed with the full refactor.
+```
+
 ## Project-Specific Guidelines
 
-### 16. MischiefMaker Context
+### 17. MischiefMaker Context
 
 - **Tone**: Keep it fun and playful (per ADR-005) - tool for friends, not academic
 - **Architecture**: Follow monorepo structure (web/, mobile/, core/)
 
-### 17. Workflow Standards
+### 18. Workflow Standards
 
 - **Pre-commit mindset**: Format, lint, type-check, build before considering done
 - **Documentation coverage**: Every feature should be documented
@@ -155,14 +201,14 @@ This keeps strategic documents focused and implementation details accessible.
 
 ## Response Structure Requirements
 
-### 18. Effective Communication
+### 19. Effective Communication
 
 - Plan out loud - explain what you'll do before doing it
 - Use parallel tool calls when operations can be simultaneous
 - Validate results and confirm tests pass
 - Summarize impact and explain why changes matter
 
-### 19. Success Criteria
+### 20. Success Criteria
 
 Every response should aim for:
 

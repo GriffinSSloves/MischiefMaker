@@ -33,7 +33,8 @@ describe('ChecksumUtility', () => {
     it('should calculate CRC32 checksum correctly', () => {
       const checksum = calculateCRC32(testBytes);
       expect(typeof checksum).toBe('number');
-      expect(checksum).toBeGreaterThan(0);
+      expect(Number.isInteger(checksum)).toBe(true);
+      expect(checksum).not.toBe(0); // CRC32 should not be 0 for non-empty data
     });
 
     it('should calculate CRC32 from string correctly', () => {

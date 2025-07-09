@@ -1,248 +1,279 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { SimpleLSBDecoder } from './SimpleLSBDecoder';
 import type { PixelData } from '../types/PixelData';
 import type { SteganographyHeader } from '../types/SteganographyHeader';
-
-// Mock the pure function modules
-vi.mock('../utils/PixelDataUtility/PixelDataUtility', () => ({
-  extractBits: vi.fn(),
-}));
-
-vi.mock('../utils/HeaderUtility/HeaderUtility', () => ({
-  getHeaderSizeInBits: vi.fn(),
-  deserializeHeader: vi.fn(),
-  validateHeader: vi.fn(),
-}));
-
-vi.mock('../utils/ChecksumUtility/ChecksumUtility', () => ({
-  calculateCRC32: vi.fn(),
-}));
-
-// Import the mocked functions
-import { extractBits } from '../utils/PixelDataUtility/PixelDataUtility';
-import { getHeaderSizeInBits, deserializeHeader, validateHeader } from '../utils/HeaderUtility/HeaderUtility';
-import { calculateCRC32 } from '../utils/ChecksumUtility/ChecksumUtility';
+import { createHeader } from '../utils/HeaderUtility/HeaderUtility';
+import { SimpleLSBEncoder } from './SimpleLSBEncoder';
 
 describe('SimpleLSBDecoder', () => {
   let decoder: SimpleLSBDecoder;
 
-  const samplePixelData: PixelData = {
-    width: 100,
-    height: 100,
-    channels: {
-      red: new Array(10000).fill(128),
-      green: new Array(10000).fill(128),
-      blue: new Array(10000).fill(128),
-    },
-    totalPixels: 10000,
-  };
-
-  const sampleHeader: SteganographyHeader = {
-    magicSignature: 0x4d534348,
-    version: 1,
-    messageLength: 5,
-    checksum: 0x12345678,
-    reserved: 0,
-    encodingMethod: 'simple-lsb',
-  };
-
   beforeEach(() => {
-    vi.clearAllMocks();
     decoder = new SimpleLSBDecoder();
   });
 
+  // Helper function to create test pixel data
+  function createTestPixelData(width: number, height: number, fillValue: number = 128): PixelData {
+    const totalPixels = width * height;
+    return {
+      width,
+      height,
+      channels: {
+        red: new Array(totalPixels).fill(fillValue),
+        green: new Array(totalPixels).fill(fillValue),
+        blue: new Array(totalPixels).fill(fillValue),
+      },
+      totalPixels,
+    };
+  }
+
+  // Helper function to create pixel data with specific bits encoded
+  function createPixelDataWithBits(width: number, height: number, bits: number[]): PixelData {
+    const totalPixels = width * height;
+    const red = new Array(totalPixels).fill(128);
+    const green = new Array(totalPixels).fill(128);
+    const blue = new Array(totalPixels).fill(128);
+
+    // Encode bits into LSBs (red channel first, then green, then blue)
+    for (let i = 0; i < bits.length; i++) {
+      const pixelIndex = Math.floor(i / 3);
+      const channelIndex = i % 3;
+
+      if (pixelIndex < totalPixels) {
+        const originalValue = 128; // Base value
+        const newValue = (originalValue & 0xfe) | bits[i]; // Clear LSB and set to bit value
+
+        switch (channelIndex) {
+          case 0:
+            red[pixelIndex] = newValue;
+            break;
+          case 1:
+            green[pixelIndex] = newValue;
+            break;
+          case 2:
+            blue[pixelIndex] = newValue;
+            break;
+        }
+      }
+    }
+
+    return {
+      width,
+      height,
+      channels: { red, green, blue },
+      totalPixels,
+    };
+  }
+
   describe('constructor', () => {
-    it('should create decoder', () => {
+    it('should create decoder instance', () => {
       expect(decoder).toBeInstanceOf(SimpleLSBDecoder);
     });
   });
 
   describe('extractHeader', () => {
-    it('should extract and validate header from pixel data', async () => {
-      const headerBits = [1, 0, 1, 0, 1, 0, 1, 0];
+    it('should extract valid header from encoded pixel data', async () => {
+      // Create a minimal valid message for encoding
+      const originalMessage = 'Hi';
+      const messageData = new TextEncoder().encode(originalMessage);
+      const pixelData = createTestPixelData(50, 50);
 
-      (getHeaderSizeInBits as Mock).mockReturnValue(64);
-      (extractBits as Mock).mockReturnValue(headerBits);
-      (deserializeHeader as Mock).mockReturnValue(sampleHeader);
-      (validateHeader as Mock).mockReturnValue({ isValid: true, errors: [] });
+      // Use encoder to create valid encoded pixel data
+      const encoder = new SimpleLSBEncoder();
+      const header = createHeader(originalMessage.length, 'simple-lsb', messageData);
+      const encodedPixelData = await encoder.encode(pixelData, messageData, header);
 
-      const result = await decoder.extractHeader(samplePixelData);
+      // Extract header using decoder
+      const extractedHeader = await decoder.extractHeader(encodedPixelData);
 
-      expect(extractBits).toHaveBeenCalledWith(samplePixelData, 64);
-      expect(deserializeHeader).toHaveBeenCalledWith(headerBits);
-      expect(validateHeader).toHaveBeenCalledWith(sampleHeader);
-      expect(result).toBe(sampleHeader);
+      expect(extractedHeader.magicSignature).toBe(0x4d534348); // "MSCH"
+      expect(extractedHeader.version).toBe(1);
+      expect(extractedHeader.encodingMethod).toBe('simple-lsb');
+      expect(extractedHeader.messageLength).toBe(originalMessage.length);
     });
 
-    it('should handle invalid header', async () => {
-      (getHeaderSizeInBits as Mock).mockReturnValue(64);
-      (extractBits as Mock).mockReturnValue([1, 0, 1, 0]);
-      (deserializeHeader as Mock).mockReturnValue(sampleHeader);
-      (validateHeader as Mock).mockReturnValue({ isValid: false, errors: ['Invalid magic signature'] });
+    it('should fail with invalid magic signature', async () => {
+      // Create pixel data with invalid magic signature (all zeros)
+      const invalidBits = new Array(120).fill(0); // 120 bits = 15 bytes header
+      const pixelData = createPixelDataWithBits(50, 50, invalidBits);
 
-      await expect(decoder.extractHeader(samplePixelData)).rejects.toThrow('Invalid magic signature');
+      await expect(decoder.extractHeader(pixelData)).rejects.toThrow('Invalid magic signature');
+    });
+
+    it('should fail with insufficient pixel data', async () => {
+      // Create pixel data too small for even a header
+      const pixelData = createTestPixelData(2, 2); // Only 12 bits available (2*2*3)
+
+      await expect(decoder.extractHeader(pixelData)).rejects.toThrow();
     });
   });
 
   describe('validateMessage', () => {
-    it('should validate message successfully', async () => {
-      const messageData = new Uint8Array([72, 101, 108, 108, 111]);
-      (calculateCRC32 as Mock).mockReturnValue(0x12345678);
+    it('should validate message with correct checksum', async () => {
+      const messageData = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+      const header = createHeader(messageData.length, 'simple-lsb', messageData);
 
-      const result = await decoder.validateMessage(messageData, sampleHeader);
+      const result = await decoder.validateMessage(messageData, header);
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
+      expect(result.checksumValid).toBe(true);
+      expect(result.lengthValid).toBe(true);
+    });
+
+    it('should detect message length mismatch', async () => {
+      const messageData = new Uint8Array([72, 101, 108, 108, 111]); // "Hello" (5 bytes)
+      const header = createHeader(messageData.length, 'simple-lsb', messageData); // Create valid header
+      header.messageLength = 3; // Then corrupt the length to simulate mismatch
+
+      const result = await decoder.validateMessage(messageData, header);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Message length mismatch: expected 3, got 5');
+      expect(result.lengthValid).toBe(false);
     });
 
     it('should detect checksum mismatch', async () => {
-      const messageData = new Uint8Array([72, 101, 108, 108, 111]);
-      (calculateCRC32 as Mock).mockReturnValue(0x87654321);
+      const messageData = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+      const header = createHeader(messageData.length, 'simple-lsb', messageData);
 
-      const result = await decoder.validateMessage(messageData, sampleHeader);
+      // Corrupt the header checksum
+      header.checksum = 0x12345678; // Wrong checksum
+
+      const result = await decoder.validateMessage(messageData, header);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Checksum mismatch: expected 305419896, got 2271560481');
+      expect(result.errors?.some(e => e.includes('Checksum mismatch'))).toBe(true);
+      expect(result.checksumValid).toBe(false);
     });
   });
 
   describe('decode', () => {
-    it('should decode simple LSB message', async () => {
-      const headerSizeInBits = 104; // 13 bytes * 8 bits
-      const messageSizeInBits = 5 * 8; // 5 bytes * 8 bits
-      const totalBits = headerSizeInBits + messageSizeInBits;
+    it('should decode simple message successfully', async () => {
+      const originalMessage = 'Test';
+      const messageData = new TextEncoder().encode(originalMessage);
+      const pixelData = createTestPixelData(50, 50);
 
-      // Create header bits (104 bits) + message bits (40 bits) = 144 total bits
-      const headerBits = new Array(headerSizeInBits).fill(0);
-      const messageBits = [
-        // "Hello" as bits: H=72, e=101, l=108, l=108, o=111
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0, // H = 72
-        0,
-        1,
-        1,
-        0,
-        0,
-        1,
-        0,
-        1, // e = 101
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
-        0,
-        0, // l = 108
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
-        0,
-        0, // l = 108
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
-        1,
-        1, // o = 111
-      ];
-      const allBits = [...headerBits, ...messageBits];
+      // Encode message first
+      const encoder = new SimpleLSBEncoder();
+      const header = createHeader(originalMessage.length, 'simple-lsb', messageData);
+      const encodedPixelData = await encoder.encode(pixelData, messageData, header);
 
-      (getHeaderSizeInBits as Mock).mockReturnValue(headerSizeInBits);
-      (extractBits as Mock).mockReturnValue(allBits);
-      (deserializeHeader as Mock).mockReturnValue(sampleHeader);
-      (validateHeader as Mock).mockReturnValue({ isValid: true, errors: [] });
-      (calculateCRC32 as Mock).mockReturnValue(0x12345678);
+      // Decode the message
+      const decodedBytes = await decoder.decode(encodedPixelData, header);
+      const decodedMessage = new TextDecoder().decode(decodedBytes);
 
-      const result = await decoder.decode(samplePixelData, sampleHeader);
-
-      expect(result).toBeInstanceOf(Uint8Array);
-      expect(result).toEqual(new Uint8Array([72, 101, 108, 108, 111])); // "Hello"
-      expect(extractBits).toHaveBeenCalledWith(samplePixelData, totalBits);
+      expect(decodedMessage).toBe(originalMessage);
     });
 
-    it('should handle invalid encoding method', async () => {
-      const invalidHeader = { ...sampleHeader, encodingMethod: 'triple-redundancy' as const };
+    it('should reject invalid encoding method', async () => {
+      const pixelData = createTestPixelData(50, 50);
+      const invalidHeader: SteganographyHeader = {
+        magicSignature: 0x4d534348,
+        version: 1,
+        messageLength: 5,
+        checksum: 0x12345678,
+        encodingMethod: 'triple-redundancy', // Wrong method for SimpleLSBDecoder
+        reserved: 0,
+      };
 
-      await expect(decoder.decode(samplePixelData, invalidHeader)).rejects.toThrow(
+      await expect(decoder.decode(pixelData, invalidHeader)).rejects.toThrow(
         'Invalid encoding method for SimpleLSBDecoder: triple-redundancy'
       );
     });
   });
 
   describe('decodeSimple', () => {
-    it('should decode with simple LSB method', async () => {
-      const headerSizeInBits = 104; // 13 bytes * 8 bits
-      const messageSizeInBits = 5 * 8; // 5 bytes * 8 bits
-      const totalBits = headerSizeInBits + messageSizeInBits;
+    it('should decode using simple LSB method', async () => {
+      const originalMessage = 'LSB';
+      const messageData = new TextEncoder().encode(originalMessage);
+      const pixelData = createTestPixelData(50, 50);
 
-      // Create header bits (104 bits) + message bits (40 bits) = 144 total bits
-      const headerBits = new Array(headerSizeInBits).fill(0);
-      const messageBits = [
-        // "Hello" as bits: H=72, e=101, l=108, l=108, o=111
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0, // H = 72
-        0,
-        1,
-        1,
-        0,
-        0,
-        1,
-        0,
-        1, // e = 101
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
-        0,
-        0, // l = 108
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
-        0,
-        0, // l = 108
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
-        1,
-        1, // o = 111
-      ];
-      const allBits = [...headerBits, ...messageBits];
+      // Encode message first
+      const encoder = new SimpleLSBEncoder();
+      const header = createHeader(originalMessage.length, 'simple-lsb', messageData);
+      const encodedPixelData = await encoder.encode(pixelData, messageData, header);
 
-      (getHeaderSizeInBits as Mock).mockReturnValue(headerSizeInBits);
-      (extractBits as Mock).mockReturnValue(allBits);
-      (calculateCRC32 as Mock).mockReturnValue(0x12345678);
+      // Decode using decodeSimple
+      const decodedBytes = await decoder.decodeSimple(encodedPixelData, header);
+      const decodedMessage = new TextDecoder().decode(decodedBytes);
 
-      const result = await decoder.decodeSimple(samplePixelData, sampleHeader);
+      expect(decodedMessage).toBe(originalMessage);
+    });
 
-      expect(result).toBeInstanceOf(Uint8Array);
-      expect(result).toEqual(new Uint8Array([72, 101, 108, 108, 111])); // "Hello"
-      expect(extractBits).toHaveBeenCalledWith(samplePixelData, totalBits);
+    it('should handle empty message', async () => {
+      const originalMessage = '';
+      const messageData = new TextEncoder().encode(originalMessage);
+      const pixelData = createTestPixelData(50, 50);
+
+      // Encode empty message
+      const encoder = new SimpleLSBEncoder();
+      const header = createHeader(originalMessage.length, 'simple-lsb', messageData);
+      const encodedPixelData = await encoder.encode(pixelData, messageData, header);
+
+      // Decode empty message
+      const decodedBytes = await decoder.decodeSimple(encodedPixelData, header);
+      const decodedMessage = new TextDecoder().decode(decodedBytes);
+
+      expect(decodedMessage).toBe(originalMessage);
+      expect(decodedBytes.length).toBe(0);
+    });
+
+    it('should fail validation with corrupted message', async () => {
+      const originalMessage = 'Test';
+      const messageData = new TextEncoder().encode(originalMessage);
+      const pixelData = createTestPixelData(50, 50);
+
+      // Encode message first
+      const encoder = new SimpleLSBEncoder();
+      const header = createHeader(originalMessage.length, 'simple-lsb', messageData);
+      const encodedPixelData = await encoder.encode(pixelData, messageData, header);
+
+      // Corrupt the encoded pixel data more systematically
+      // Message bits start after header (about 120 bits / 3 = 40 pixels)
+      // Corrupt multiple pixels in the message area
+      for (let i = 50; i < 60; i++) {
+        encodedPixelData.channels.red[i] ^= 1; // Flip LSB
+        encodedPixelData.channels.green[i] ^= 1; // Flip LSB
+        encodedPixelData.channels.blue[i] ^= 1; // Flip LSB
+      }
+
+      // Decoding should fail due to checksum mismatch
+      await expect(decoder.decodeSimple(encodedPixelData, header)).rejects.toThrow('Message validation failed');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle maximum message length', async () => {
+      // Create a message that fills most of the available capacity
+      const pixelData = createTestPixelData(100, 100); // 30,000 bits capacity
+      const encoder = new SimpleLSBEncoder();
+      const availableBytes = encoder.calculateCapacity(pixelData.width, pixelData.height);
+      const maxMessage = 'A'.repeat(availableBytes - 1); // Leave some room for header
+
+      const messageData = new TextEncoder().encode(maxMessage);
+      const header = createHeader(maxMessage.length, 'simple-lsb', messageData);
+      const encodedPixelData = await encoder.encode(pixelData, messageData, header);
+
+      const decodedBytes = await decoder.decode(encodedPixelData, header);
+      const decodedMessage = new TextDecoder().decode(decodedBytes);
+
+      expect(decodedMessage).toBe(maxMessage);
+    });
+
+    it('should handle single character message', async () => {
+      const originalMessage = 'A';
+      const messageData = new TextEncoder().encode(originalMessage);
+      const pixelData = createTestPixelData(50, 50);
+
+      const encoder = new SimpleLSBEncoder();
+      const header = createHeader(originalMessage.length, 'simple-lsb', messageData);
+      const encodedPixelData = await encoder.encode(pixelData, messageData, header);
+
+      const decodedBytes = await decoder.decode(encodedPixelData, header);
+      const decodedMessage = new TextDecoder().decode(decodedBytes);
+
+      expect(decodedMessage).toBe(originalMessage);
     });
   });
 });

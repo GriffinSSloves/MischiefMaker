@@ -96,3 +96,52 @@ For the core library:
 - **Implementation notes** for complex algorithms
 - **Example usage** in documentation
 - **Decision rationale** for architectural choices
+
+## Functional Programming Preferences
+
+### Pure Functions Over Static Classes
+
+**Prefer pure functions over classes filled with static methods:**
+
+- **Pure functions** - easier to test, reason about, and compose
+- **Avoid static classes** - they're harder to mock and test in isolation
+- **Functional composition** - enables better code reuse and modularity
+- **Immutable by default** - functions should not modify input parameters
+
+```typescript
+// ✅ Good - pure functions
+export function calculateCapacity(width: number, height: number): number {
+  return width * height * 3; // 3 channels (RGB)
+}
+
+export function validatePixelData(pixelData: PixelData): ValidationResult {
+  // Pure function that returns validation result without side effects
+  return { isValid: true, errors: [] };
+}
+
+// ❌ Avoid - static class pattern
+export class ImageUtils {
+  static calculateCapacity(width: number, height: number): number {
+    return width * height * 3;
+  }
+
+  static validatePixelData(pixelData: PixelData): ValidationResult {
+    return { isValid: true, errors: [] };
+  }
+}
+```
+
+**Benefits of pure functions:**
+
+- **Easier testing** - no need to mock class instances
+- **Better tree-shaking** - bundlers can eliminate unused functions
+- **Simpler imports** - import only what you need
+- **Functional composition** - functions can be easily combined
+- **Predictable behavior** - same input always produces same output
+
+**When to use classes:**
+
+- **State management** - when you need to maintain internal state
+- **Interface implementation** - when implementing complex interfaces
+- **Dependency injection** - when you need to inject dependencies
+- **Complex lifecycle** - when you need initialization/cleanup

@@ -49,33 +49,57 @@ export class TripleRedundancyDecoder implements ITripleRedundancyDecoder {
    * Validate extracted message against header
    */
   async validateMessage(messageData: Uint8Array, header: SteganographyHeader): Promise<ValidationResult> {
-    const errors: string[] = [];
-
     try {
-      // Validate message length
-      if (messageData.length !== header.messageLength) {
-        errors.push(`Message length mismatch: expected ${header.messageLength}, got ${messageData.length}`);
+      // Re-validate header first (in case it was corrupted and passed directly to decode)
+      const headerValidation = validateHeader(header);
+      if (!headerValidation.isValid) {
+        return {
+          isValid: false,
+          errors: headerValidation.errors,
+          magicSignatureValid: header.magicSignature === 0x4d534348,
+          versionSupported: header.version <= 1,
+          checksumValid: false,
+          lengthValid: false,
+        };
       }
 
-      // Validate checksum
+      // Validate message length SECOND (more specific error)
+      if (messageData.length !== header.messageLength) {
+        return {
+          isValid: false,
+          errors: [`Message length mismatch: expected ${header.messageLength}, got ${messageData.length}`],
+          magicSignatureValid: true,
+          versionSupported: true,
+          checksumValid: false,
+          lengthValid: false,
+        };
+      }
+
+      // Validate checksum only if header and length are correct
       const calculatedChecksum = calculateCRC32(messageData);
       if (calculatedChecksum !== header.checksum) {
-        errors.push(`Checksum mismatch: expected ${header.checksum}, got ${calculatedChecksum}`);
+        return {
+          isValid: false,
+          errors: [`Checksum mismatch: expected ${header.checksum}, got ${calculatedChecksum}`],
+          magicSignatureValid: true,
+          versionSupported: true,
+          checksumValid: false,
+          lengthValid: true,
+        };
       }
 
       return {
-        isValid: errors.length === 0,
-        errors,
-        magicSignatureValid: true, // Already validated in extractHeader
-        versionSupported: true, // Already validated in extractHeader
-        checksumValid: calculatedChecksum === header.checksum,
-        lengthValid: messageData.length === header.messageLength,
+        isValid: true,
+        errors: [],
+        magicSignatureValid: true,
+        versionSupported: true,
+        checksumValid: true,
+        lengthValid: true,
       };
     } catch (error) {
-      errors.push(`Validation error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         isValid: false,
-        errors,
+        errors: [`Validation error: ${error instanceof Error ? error.message : String(error)}`],
         magicSignatureValid: false,
         versionSupported: false,
         checksumValid: false,
@@ -114,7 +138,7 @@ export class TripleRedundancyDecoder implements ITripleRedundancyDecoder {
     // Convert message bits to bytes
     const messageData = this.bitsToBytes(messageBits);
 
-    // Validate the extracted message
+    // Validate the extracted message - checksum after majority vote
     const validation = await this.validateMessage(messageData, header);
     if (!validation.isValid) {
       throw new Error(`Message validation failed: ${validation.errors?.join(', ') || 'Unknown validation error'}`);

@@ -21,7 +21,7 @@ export function calculateCRC32(data: Uint8Array): number {
     }
   }
 
-  return (crc ^ 0xffffffff) >>> 0; // Ensure unsigned 32-bit result
+  return (crc ^ 0xffffffff) | 0; // Ensure signed 32-bit result
 }
 
 /**

@@ -12,16 +12,16 @@ describe('CapacityCalculator', () => {
 
       expect(capacity.totalPixels).toBe(786432);
       expect(capacity.availableBits).toBe(2359296); // 786432 * 3 channels * 1 LSB
-      expect(capacity.effectiveBits).toBe(2241331); // With 0.95 safety margin
+      expect(capacity.effectiveBits).toBe(2359296); // Full capacity without safety margin
       expect(capacity.headerSize).toBe(16); // Total header bytes
 
-      // Simple LSB: (2241331 - 16*8) / 8 = 280150 bytes ≈ 274KB
-      expect(capacity.simpleCapacity).toBeGreaterThan(275000);
-      expect(capacity.simpleCapacity).toBeLessThan(285000);
+      // Simple LSB: (2359296 - 16*8) / 8 = 294896 bytes ≈ 288KB
+      expect(capacity.simpleCapacity).toBeGreaterThan(290000);
+      expect(capacity.simpleCapacity).toBeLessThan(300000);
 
-      // Triple redundancy: (2241331/3 - 16*8) / 8 = 93370 bytes ≈ 91KB
-      expect(capacity.tripleCapacity).toBeGreaterThan(90000);
-      expect(capacity.tripleCapacity).toBeLessThan(95000);
+      // Triple redundancy: (2359296/3 - 16*8) / 8 = 98288 bytes ≈ 96KB
+      expect(capacity.tripleCapacity).toBeGreaterThan(95000);
+      expect(capacity.tripleCapacity).toBeLessThan(100000);
     });
 
     it('should handle small image dimensions', () => {
@@ -53,7 +53,7 @@ describe('CapacityCalculator', () => {
 
       expect(capacity.totalPixels).toBe(12000000);
       expect(capacity.availableBits).toBe(36000000);
-      expect(capacity.effectiveBits).toBe(34200000); // With 0.95 safety margin
+      expect(capacity.effectiveBits).toBe(36000000); // Full capacity without safety margin
       expect(capacity.simpleCapacity).toBeGreaterThan(4000000); // Over 4MB
       expect(capacity.tripleCapacity).toBeGreaterThan(1000000); // Over 1MB
     });
@@ -143,7 +143,7 @@ describe('CapacityCalculator', () => {
 
       // Basic sanity checks
       expect(capacity.availableBits).toBe(capacity.totalPixels * 3);
-      expect(capacity.effectiveBits).toBeLessThan(capacity.availableBits);
+      expect(capacity.effectiveBits).toBe(capacity.availableBits);
       expect(capacity.simpleCapacity).toBeGreaterThan(capacity.tripleCapacity);
 
       // Triple redundancy should be approximately 1/3 of simple

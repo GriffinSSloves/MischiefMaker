@@ -35,7 +35,13 @@ export {
 
 // Implementations
 export { CapacityCalculator } from './utils/CapacityCalculator/CapacityCalculator';
-export { BitOperations } from './utils/BitOperations/BitOperations';
-export { ChecksumUtility } from './utils/ChecksumUtility/ChecksumUtility';
-export { HeaderUtility } from './utils/HeaderUtility/HeaderUtility';
-export { PixelDataUtility } from './utils/PixelDataUtility/PixelDataUtility';
+export * from './utils/BitOperations/BitOperations';
+export * from './utils/ChecksumUtility/ChecksumUtility';
+export * from './utils/HeaderUtility/HeaderUtility';
+export * from './utils/PixelDataUtility/PixelDataUtility';
+
+// Algorithm implementations
+export { SimpleLSBEncoder } from './algorithms/SimpleLSBEncoder';
+export { SimpleLSBDecoder } from './algorithms/SimpleLSBDecoder';
+export { TripleRedundancyEncoder } from './algorithms/TripleRedundancyEncoder';
+export { TripleRedundancyDecoder } from './algorithms/TripleRedundancyDecoder';

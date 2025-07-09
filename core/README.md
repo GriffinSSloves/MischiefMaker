@@ -66,6 +66,7 @@ core/
 │   │   │   └── BitOperations.test.ts
 │   └── algorithms/          # Algorithm implementations (planned)
 │       └── utils/
+// todo, add the test folder w/ integration and utils subfolders here.
 ```
 
 ## Technical Documentation

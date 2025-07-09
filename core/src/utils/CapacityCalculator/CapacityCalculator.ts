@@ -23,8 +23,8 @@ export class CapacityCalculator implements ICapacityCalculator {
     // Calculate total available bits (3 bits per pixel for RGB)
     const availableBits = totalPixels * 3;
 
-    // Apply safety margin to avoid edge cases
-    const effectiveBits = Math.floor(availableBits * 0.95);
+    // Use full capacity without safety margin
+    const effectiveBits = availableBits;
 
     // Simple LSB capacity (1 bit per channel)
     const simpleBitsForMessage = effectiveBits - headerSize * 8;
