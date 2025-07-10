@@ -119,25 +119,25 @@ pnpm run build
 
 ```typescript
 // web/src/utils/steganography.ts
-import { SteganographyService } from '@mischiefmaker/core';
+import { SteganographyEngine } from '@mischiefmaker/core';
 
 // Platform-specific implementations injected at runtime
-const steganographyService = new SteganographyService({
-  imageProcessor: webImageProcessor, // Canvas API implementation
-  fileSystem: webFileSystem, // File API implementation
-});
+const steganographyEngine = new SteganographyEngine(
+  webImageProcessor // Canvas API implementation
+);
 
 // Encode a message
-const result = await steganographyService.encode({
-  message: 'Secret message',
-  imageData: inputImageBuffer,
-  format: 'png',
-});
+const result = await steganographyEngine.encodeMessage(
+  inputImageBuffer,
+  'Secret message',
+  { quality: 85, maxSize: 1024 * 1024 } // Optional compression options
+);
 
 // Decode a message
-const decoded = await steganographyService.decode({
-  imageData: steganographicImageBuffer,
-});
+const decoded = await steganographyEngine.decodeMessage(steganographicImageBuffer);
+
+// Check capacity before encoding
+const capacity = await steganographyEngine.checkCapacity(imageBuffer, message.length);
 ```
 
 ### Workspace Development
@@ -148,7 +148,18 @@ The core package is automatically linked during development:
 - No manual building or publishing required
 - Hot reloading works across packages
 
-## Core Interfaces
+## Core Features
+
+### SteganographyEngine (Complete!)
+
+Production-ready steganography engine with automatic method selection:
+
+- **Automatic encoding** - SimpleLSB (max capacity) → TripleRedundancy (error correction) fallback
+- **Automatic decoding** - Method detection and validation
+- **Compression support** - JPEG quality control with 1MB targeting
+- **Capacity checking** - Pre-encode validation for both methods
+- **Built-in validation** - Round-trip testing ensures data integrity
+- **32 comprehensive tests** - Full coverage including edge cases and corruption scenarios
 
 ### ImageProcessor Interface
 
