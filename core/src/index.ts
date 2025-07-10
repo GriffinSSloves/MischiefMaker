@@ -6,11 +6,22 @@ export type { IEncoder, ISimpleLSBEncoder, ITripleRedundancyEncoder, IAdaptiveLS
 export type { IDecoder, ISimpleLSBDecoder, ITripleRedundancyDecoder, IAdaptiveLSBDecoder } from './interfaces/IDecoder';
 export type { ICapacityCalculator } from './interfaces/ICapacityCalculator';
 
+// DCT interfaces - direct imports
+export type { IDCTEncoder } from './interfaces/IDCTEncoder';
+export type { IDCTDecoder } from './interfaces/IDCTDecoder';
+export type { IDCTSteganographyEngine } from './interfaces/IDCTSteganographyEngine';
+
 // Algorithm types - direct imports from individual files
 export type { EncodingMethod } from './types/EncodingMethod';
 export type { AlgorithmConfig } from './types/AlgorithmConfig';
 export type { CompressionOptions } from './types/CompressionOptions';
 export type { LSBConfig } from './types/LSBConfig';
+
+// DCT types - direct imports from individual files
+export type { DCTEncodingOptions } from './types/DCTEncodingOptions';
+export type { DCTEncodingResult } from './types/DCTEncodingResult';
+export type { DCTDecodingOptions } from './types/DCTDecodingOptions';
+export type { DCTDecodingResult } from './types/DCTDecodingResult';
 
 // Data types - direct imports from individual files
 export type { SteganographyHeader } from './types/SteganographyHeader';
@@ -48,3 +59,4 @@ export { TripleRedundancyDecoder } from './algorithms/TripleRedundancyDecoder';
 
 // Services
 export { SteganographyEngine } from './services/SteganographyEngine';
+export { DCTSteganographyEngine } from './services/DCTSteganographyEngine';
