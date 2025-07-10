@@ -2,6 +2,8 @@
 
 A cross-platform steganography application for hiding secret messages in images. Send covert messages to friends through seemingly innocent pictures.
 
+> **Current Status**: Pivoting to DCT coefficient steganography for JPEG messaging service compatibility. The current pixel-domain implementation cannot survive JPEG compression by messaging apps.
+
 ## Quick Start
 
 ### Web Application

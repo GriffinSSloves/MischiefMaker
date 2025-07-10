@@ -2,6 +2,19 @@
 
 Core steganography engine for MischiefMaker, designed to be platform-agnostic and used across web and mobile implementations.
 
+## Current Status
+
+**⚠️ Architectural Pivot Required**
+
+The current pixel-domain LSB implementation (275 tests passing) cannot survive JPEG compression used by messaging services. We're pivoting to **DCT coefficient steganography**:
+
+- **Problem**: JPEG's DCT/quantization process destroys pixel-domain LSB relationships
+- **Solution**: Modify JPEG DCT coefficients directly, which survive re-compression
+- **Impact**: Core algorithms need reimplementation with platform-specific JPEG libraries
+- **Benefit**: True messaging service compatibility (iMessage, WhatsApp, SMS/MMS)
+
+The current codebase provides a solid foundation with reusable utilities (CRC32, headers, bit operations) and clean architecture.
+
 ## Tech Stack
 
 - **TypeScript** - Type safety and better DX
@@ -73,8 +86,8 @@ core/
 
 For detailed algorithm specifications and implementation details:
 
-- **[Algorithm Specification](docs/algorithm.md)** - LSB steganography algorithm design and implementation strategy
-- **[Image Technical Considerations](docs/image-technical-considerations.md)** - Detailed calculations, implementation examples, and technical deep-dive
+- **[Algorithm Specification](docs/algorithm.md)** - DCT coefficient steganography algorithm design and implementation strategy
+- **[Image Technical Considerations](docs/image-technical-considerations.md)** - Detailed DCT implementation guide, library requirements, and technical deep-dive
 
 ## Getting Started
 
@@ -150,26 +163,23 @@ The core package is automatically linked during development:
 
 ## Core Features
 
-### SteganographyEngine (Complete!)
+### SteganographyEngine (Deprecated - Needs DCT Implementation)
 
-Production-ready steganography engine with automatic method selection:
+Current pixel-domain implementation (275 tests passing) but requires DCT coefficient rewrite:
 
-- **Automatic encoding** - SimpleLSB (max capacity) → TripleRedundancy (error correction) fallback
-- **Automatic decoding** - Method detection and validation
-- **Compression support** - JPEG quality control with 1MB targeting
-- **Capacity checking** - Pre-encode validation for both methods
-- **Built-in validation** - Round-trip testing ensures data integrity
-- **32 comprehensive tests** - Full coverage including edge cases and corruption scenarios
+- ✅ **Solid foundation** - Complete utilities, interfaces, and architecture
+- ✅ **Comprehensive testing** - 275 tests with full coverage and error handling
+- ❌ **Pixel-domain limitation** - Cannot survive JPEG compression by messaging services
+- 🔄 **Requires DCT pivot** - Need platform-specific JPEG libraries for coefficient manipulation
 
-### ImageProcessor Interface
+### ImageProcessor Interface (Needs DCT Update)
 
-Minimal interface for image manipulation operations with clear, workflow-specific function names:
+Current interface designed for pixel-domain processing, will be updated for DCT coefficient manipulation:
 
-- **Preprocess images** - Convert any format to JPEG with steganography-optimized compression
-- **Decompress JPEGs** - Convert JPEG to intermediate format for processing
-- **Convert pixel data** - Transform intermediate format to LSB-ready pixel data
-- **Apply modifications** - Update intermediate format with modified pixel data
-- **Compress to JPEG** - Generate final JPEG output
+- **Future: DCT coefficient extraction** - Parse JPEG structure and extract coefficients
+- **Future: AC coefficient modification** - Modify frequency domain coefficients
+- **Future: JPEG rebuilding** - Reconstruct JPEG from modified coefficients
+- **Current: Basic image processing** - Compression, format conversion (still useful)
 
 ### FileSystem Interface
 

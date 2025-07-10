@@ -1,98 +1,93 @@
 # Current Tasks
 
-## Recently Completed (2025-01-27)
+## CRITICAL ARCHITECTURE CHANGE - DCT Coefficient Steganography Required
 
-- ~~Fix all TypeScript compilation errors including missing exports and AlgorithmConfig properties~~ ✅ **COMPLETED**
-- ~~Add TypeScript type checking to pre-commit scripts for both core and web packages~~ ✅ **COMPLETED**
-- ~~Replace manual header size calculations with HeaderUtility.getHeaderSize() calls~~ ✅ **COMPLETED**
-- ~~Move each utility and test into its own folder (BitOperations/BitOperations.ts, etc.)~~ ✅ **COMPLETED**
-- ~~Split DataTypes.ts into separate files for each type (SteganographyHeader.ts, PixelData.ts, etc.)~~ ✅ **COMPLETED**
-- ~~Split AlgorithmTypes.ts into individual files (EncodingMethod.ts, AlgorithmConfig.ts, etc.)~~ ✅ **COMPLETED**
-- ~~Split ResultTypes.ts into individual files (EncodingResult.ts, DecodingResult.ts, etc.)~~ ✅ **COMPLETED**
-- ~~Improve IImageProcessor interface function naming and fix any type usage~~ ✅ **COMPLETED**
+### **Current Status: Pixel-Domain LSB Implementation Cannot Work**
 
-## Core Algorithm Implementation - COMPLETED! 🎉
+The current implementation using pixel-domain LSB steganography is **fundamentally incompatible** with JPEG compression. The DCT/quantization process systematically destroys LSB relationships, making message recovery impossible even with triple redundancy.
 
-- ~~Design and document the core steganography algorithms~~ ✅ **COMPLETED** - See [Algorithm Specification](../core/docs/algorithm.md)
-- ~~Choose steganography implementation approach~~ ✅ **COMPLETED** - Selected combination strategy with automatic fallback (Simple LSB → Triple Redundancy)
-- ~~Implement capacity calculation for both simple and triple redundancy modes~~ ✅ **COMPLETED** - CapacityCalculator with 11 comprehensive tests
-- ~~Implement CRC32 checksum validation for data integrity~~ ✅ **COMPLETED** - ChecksumUtility with multiple algorithms and 36 tests
-- ~~Build magic signature detection ("MSCH" identifier) and validation~~ ✅ **COMPLETED** - HeaderUtility with complete header management and 36 tests
-- ~~Build simple LSB embedding/extraction functions - 1 LSB per channel (primary method)~~ ✅ **COMPLETED** - PixelDataUtility with comprehensive pixel manipulation and 39 tests
-- ~~Build triple redundancy LSB embedding/extraction functions - 1 LSB per channel with 3x encoding (fallback)~~ ✅ **COMPLETED** - PixelDataUtility with error correction support
-- ~~Implement majority vote decoding for error correction in triple redundancy mode~~ ✅ **COMPLETED** - BitOperations with voting algorithms and 32 tests
-- ~~Create comprehensive test suite for combination strategy~~ ✅ **COMPLETED** - 233 tests across utilities, algorithms, and integration with 100% pass rate
-- ~~Set up shared utilities for image processing (platform-agnostic interfaces)~~ ✅ **COMPLETED** - Complete utility foundation with dependency injection architecture
-- ~~Implement SimpleLSBEncoder and SimpleLSBDecoder classes~~ ✅ **COMPLETED** - Full implementation with 31 tests (17 encoder + 14 decoder)
-- ~~Implement TripleRedundancyEncoder and TripleRedundancyDecoder classes~~ ✅ **COMPLETED** - Full implementation with 40 tests (18 encoder + 22 decoder)
-- ~~Create integration tests for real encode-decode workflows~~ ✅ **COMPLETED** - 8 integration tests covering cross-algorithm scenarios
-- ~~Fix all algorithm test failures and implementation bugs~~ ✅ **COMPLETED** - Resolved 29+ real bugs discovered through behavior-focused testing
-- ~~Resolve checksum architecture issue with post-compression validation~~ ✅ **COMPLETED** - Fixed majority-vote checksum calculation
-- ~~Remove arbitrary 0.95 safety margin from capacity calculations~~ ✅ **COMPLETED** - Use full image capacity for maximum utilization
+**Mathematical Reality:**
 
-## Miscellaneous
+- 100KB JPEG → 3MB pixel data (30:1 compression)
+- DCT quantization eliminates LSB relationships as "noise"
+- No amount of redundancy can overcome systematic coefficient destruction
 
-- ~~Run a documentation consistency check now that we are using a monorepo package, including Claude.md and any cursor rules files~~ ✅ **COMPLETED**
-- ~~Split architecture.md into focused system design and separate coding standards documentation~~ ✅ **COMPLETED**
+**Current Implementation Status:**
 
-## High-Level Interface Implementation - COMPLETED! 🎉
+- ✅ **275 tests passing** - All pixel-domain code works correctly
+- ❌ **Fundamental design flaw** - Cannot survive JPEG compression
+- 🔄 **Requires complete pivot** - DCT coefficient steganography needed
 
-**Core steganography engine is production-ready with 275 tests passing!**
+---
 
-- ~~Implement ISteganographyEngine with automatic method selection and fallback logic~~ ✅ **COMPLETED** - Full implementation with SimpleLSB → TripleRedundancy fallback
-- ~~Create universal compression functions (SMS/MMS quality level targeting)~~ ✅ **COMPLETED** - JPEG quality control and 1MB size targeting
-- ~~Add encoding method detection~~ ✅ **COMPLETED** - Automatic detection of Simple LSB vs Triple Redundancy methods
-- ~~Create messaging service compatibility validation~~ ✅ **COMPLETED** - Built-in validation with round-trip testing and 32 comprehensive tests
+## HIGH PRIORITY: DCT Coefficient Implementation
 
-## Platform-Specific Implementation (Next Phase)
+### **Phase 1: Research & Library Evaluation**
 
-**Core engine complete! Now need platform-specific image processing implementations.**
+- **Research JPEG DCT libraries** for web platform (mozjpeg.js, jpegjs)
+- **Evaluate mobile platform options** (libjpeg-turbo React Native bindings)
+- **Test Node.js DCT libraries** (sharp with custom JPEG processing)
+- **Benchmark coefficient extraction** performance across platforms
+- **Validate coefficient modification** stability across quality levels
 
-- **Create web image processing utilities** - Canvas API implementation for JPEG compression, resizing, format conversion
-- **Create mobile image processing utilities** - React Native image processing implementation
-- **Platform compatibility testing** - Test steganography engine with real platform implementations
+### **Phase 2: Core DCT Algorithm Development**
 
-## Web Application Integration
+- **Implement DCT coefficient extraction** from JPEG structure
+- **Build AC coefficient modification** algorithm (preserve DC coefficients)
+- **Create triple redundancy** embedding in AC coefficients
+- **Implement majority vote decoding** for error correction
+- **Develop capacity calculation** based on available AC coefficients
 
-- **Build the main steganography interface** (encode/decode messages) in web app
-- **Implement file upload and image processing** with JPEG conversion
-- **Add user-friendly error handling and validation**
+### **Phase 3: Platform Integration**
 
-## Web Development
+- **Web DCT processor** - mozjpeg.js integration
+- **Mobile DCT processor** - libjpeg-turbo React Native bindings
+- **Node.js DCT processor** - sharp with custom JPEG processing
+- **Cross-platform testing** and optimization
+- **Performance benchmarking** for production use
 
-_All basic web development tasks completed! Ready for steganography feature integration._
+### **Phase 4: Messaging Service Validation**
 
-## Future Development
+- **Test iMessage compatibility** (75% quality re-compression)
+- **Test WhatsApp compatibility** (65% quality re-compression)
+- **Test SMS/MMS compatibility** (45% quality re-compression)
+- **Test Telegram compatibility** (75% quality re-compression)
+- **Validate message recovery** across all services
 
-### Mobile Development
+---
 
-- Set up React Native development environment
-- Implement mobile-specific UI components
-- Integrate with core steganography library
+## DEPRECATED: Pixel-Domain LSB Implementation
 
-### Future Algorithm Enhancements
+### **Current Core Foundation - DEPRECATED BUT COMPLETE**
 
-- **Option B Implementation**: Direct JPEG coefficient manipulation (if reliability issues arise)
-- **Reed-Solomon coding**: For extremely high reliability requirements
-- **Adaptive LSB depth**: Automatic optimization based on image and message characteristics
+The following implementation is **technically sound** but **fundamentally incompatible** with JPEG compression:
 
-## Foundation Status
+- ~~Complete steganography engine with 275 tests across utilities, algorithms, services, and integration (100% pass rate)~~ ❌ **DEPRECATED**
+- ~~Production-ready SteganographyEngine with automatic method selection, fallback logic, and validation~~ ❌ **DEPRECATED**
+- ~~Real encode-decode workflows with corruption recovery and cross-algorithm error handling~~ ❌ **DEPRECATED**
+- ~~Production-ready algorithms with SimpleLSB (maximum capacity) and TripleRedundancy (error correction)~~ ❌ **DEPRECATED**
 
-### ✅ Completed Core Foundation
+### **Preserve for Reference**
 
-- **Complete steganography engine** with 275 tests across utilities, algorithms, services, and integration (100% pass rate)
-- **Production-ready SteganographyEngine** with automatic method selection, fallback logic, and validation
-- **Real encode-decode workflows** with corruption recovery and cross-algorithm error handling
-- **Production-ready algorithms** with SimpleLSB (maximum capacity) and TripleRedundancy (error correction)
-- **Comprehensive test coverage** including unit tests, integration tests, and behavior-focused testing
-- **Type system atomization** - every type in its own file with direct imports
-- **Platform-agnostic architecture** with dependency injection for image processing
+- **Keep existing code** as reference implementation
+- **Archive pixel-domain tests** for educational purposes
+- **Document lessons learned** from pixel-domain approach
+- **Extract reusable utilities** (CRC32, header management, bit operations)
+
+---
+
+## FOUNDATION STATUS
+
+### ✅ **Completed Foundation (Still Valid)**
+
 - **Modern monorepo setup** with pnpm workspaces
 - **Zero TypeScript errors** across entire codebase
 - **Modern development tooling** with ESLint flat config, Prettier, and pre-commit hooks
+- **Type system atomization** - every type in its own file with direct imports
+- **Platform-agnostic architecture** with dependency injection for image processing
 - **Clean interface design** with clear, descriptive function names
 
-### ✅ Completed Web Foundation
+### ✅ **Completed Web Foundation (Still Valid)**
 
 - **Modern React 19 setup** with TypeScript, Vite, TailwindCSS v4
 - **ShadCN UI component library** fully integrated
@@ -100,8 +95,75 @@ _All basic web development tasks completed! Ready for steganography feature inte
 - **Comprehensive testing setup** with Vitest and React Testing Library
 - **Complete development tooling** with formatting, linting, and type checking
 
+### ❌ **Deprecated Core Implementation**
+
+- **Pixel-domain LSB algorithms** - SimpleLSBEncoder/Decoder, TripleRedundancyEncoder/Decoder
+- **Pixel-based SteganographyEngine** - Cannot survive JPEG compression
+- **275 pixel-domain tests** - Technically correct but fundamentally flawed approach
+- **CanvasImageProcessor** - Current implementation assumes pixel-domain processing
+
 ---
 
-## Completed Tasks
+## NEXT STEPS
 
-See [completed.md](completed.md) for a full history of finished tasks.
+### **Immediate Actions**
+
+1. **Mark current implementation as deprecated** in code comments
+2. **Research DCT coefficient libraries** for target platforms
+3. **Create proof-of-concept** DCT coefficient modification
+4. **Test basic JPEG coefficient stability** across quality levels
+5. **Design new DCT-based interfaces** and architecture
+
+### **Implementation Strategy**
+
+1. **Keep existing utilities** - CRC32, header management, bit operations are reusable
+2. **Replace image processing** - DCT coefficient manipulation instead of pixel-domain
+3. **Maintain interface compatibility** - Same public API, different internal implementation
+4. **Preserve test structure** - Replace pixel-domain tests with DCT coefficient tests
+5. **Validate messaging compatibility** - Real-world testing with messaging services
+
+### **Success Criteria**
+
+- **DCT coefficient steganography** successfully embeds/extracts messages
+- **Messaging service compatibility** - messages survive re-compression
+- **Quality preservation** - visual changes remain imperceptible
+- **Performance optimization** - production-ready speed and memory usage
+- **Cross-platform support** - web, mobile, and Node.js implementations
+
+---
+
+## RECENTLY COMPLETED (2025-01-27) - DEPRECATED
+
+- ~~Fix all TypeScript compilation errors including missing exports and AlgorithmConfig properties~~ ✅ **COMPLETED** (deprecated)
+- ~~Add TypeScript type checking to pre-commit scripts for both core and web packages~~ ✅ **COMPLETED** (still valid)
+- ~~Replace manual header size calculations with HeaderUtility.getHeaderSize() calls~~ ✅ **COMPLETED** (deprecated)
+- ~~Move each utility and test into its own folder (BitOperations/BitOperations.ts, etc.)~~ ✅ **COMPLETED** (still valid)
+- ~~Split DataTypes.ts into separate files for each type (SteganographyHeader.ts, PixelData.ts, etc.)~~ ✅ **COMPLETED** (still valid)
+- ~~Split AlgorithmTypes.ts into individual files (EncodingMethod.ts, AlgorithmConfig.ts, etc.)~~ ✅ **COMPLETED** (still valid)
+- ~~Split ResultTypes.ts into individual files (EncodingResult.ts, DecodingResult.ts, etc.)~~ ✅ **COMPLETED** (still valid)
+- ~~Improve IImageProcessor interface function naming and fix any type usage~~ ✅ **COMPLETED** (needs updating for DCT)
+
+## COMPLETED TASKS - DEPRECATED
+
+See [completed.md](completed.md) for a full history of finished tasks. **Note**: Most completed tasks are now deprecated due to the architectural pivot to DCT coefficient steganography.
+
+---
+
+## ARCHITECTURAL DECISION SUMMARY
+
+**Decision**: Pivot from pixel-domain LSB to DCT coefficient steganography
+
+**Rationale**:
+
+- Pixel-domain LSB fundamentally cannot survive JPEG compression
+- DCT coefficients are preserved during JPEG-to-JPEG compression
+- Messaging services use JPEG compression, requiring DCT coefficient approach
+- No amount of redundancy can overcome systematic DCT quantization
+
+**Impact**:
+
+- Complete reimplementation of core steganography algorithms
+- Platform-specific JPEG libraries required
+- Existing utilities (CRC32, headers, bit operations) remain useful
+- Web app and project structure remain unchanged
+- Messaging service compatibility becomes achievable

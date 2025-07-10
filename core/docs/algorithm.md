@@ -2,222 +2,283 @@
 
 ## Overview
 
-MischiefMaker uses LSB (Least Significant Bit) steganography with a JPEG-first approach designed for messaging service compatibility. All images are pre-compressed to SMS/MMS standards to prevent further compression by iMessage, WhatsApp, etc.
+MischiefMaker uses **DCT coefficient steganography** for JPEG images, designed for messaging service compatibility. This approach modifies JPEG compression coefficients directly, ensuring hidden messages survive additional JPEG compression by iMessage, WhatsApp, SMS/MMS, and other messaging services.
 
 ## Core Strategy
 
-### **JPEG-First Approach**
+### **DCT Coefficient Manipulation**
 
-1. **Pre-compress** images to SMS/MMS quality level (45%)
-2. **Embed** message using combination strategy for maximum reliability
-3. **Result**: Messaging services see "already compressed" and leave unchanged
+1. **Parse JPEG structure** - Extract DCT coefficients without full decompression
+2. **Modify AC coefficients** - Embed message bits in less significant AC coefficients
+3. **Preserve DC coefficients** - Maintain image quality and visual integrity
+4. **Rebuild JPEG** - Generate new JPEG with embedded message
 
 ### **Why This Works**
 
-- **Messaging services** compress images automatically
-- **Pre-compression** prevents additional quality loss
-- **LSB modifications** remain invisible after compression
-- **Combination strategy** ensures maximum reliability with optimal capacity usage
+- **Messaging services** perform JPEG-to-JPEG compression
+- **DCT coefficient changes** are preserved during re-compression
+- **AC coefficient LSBs** are less perceptually significant
+- **No pixel-domain artifacts** from compression/decompression cycles
 
-## Reliability Strategy: Combination Approach
+## Technical Foundation
 
-### **Implementation Method**
+### **JPEG Compression Process**
 
-**Primary Strategy**: Combination approach with automatic fallback
+```
+Original Image → DCT Transform → Quantization → Entropy Encoding → JPEG File
+```
 
-1. **First attempt**: Simple LSB encoding (100% capacity)
-2. **If fails**: Fall back to triple redundancy (33% capacity, very high reliability)
-3. **If needed**: Future adaptive LSB depth (variable capacity/reliability)
+### **Our Steganography Process**
 
-**Benefits**:
+```
+JPEG File → Parse Structure → Extract DCT Coefficients → Modify AC Coefficients → Rebuild JPEG
+```
 
-- **Optimal capacity**: Uses full capacity when possible
-- **High reliability**: Falls back to triple redundancy when needed
-- **Automatic selection**: Algorithm chooses best approach based on image characteristics
+### **Why Pixel-Domain LSB Fails**
 
-### **Fallback Sequence**
+The previous approach (pixel-domain LSB) cannot work with JPEG compression:
 
-| Attempt | Method            | Capacity     | Reliability | Use Case                              |
-| ------- | ----------------- | ------------ | ----------- | ------------------------------------- |
-| 1st     | Simple LSB        | 100% (288KB) | Medium      | Clean images, small messages          |
-| 2nd     | Triple Redundancy | 33% (96KB)   | Very High   | Compressed images, messaging services |
-| 3rd     | Adaptive LSB      | Variable     | High        | Future enhancement for edge cases     |
+1. **DCT Transform** - Pixels converted to frequency coefficients
+2. **Quantization** - Throws away "less important" frequency data (lossy)
+3. **Inverse DCT** - Reconstructs pixels with completely different values
+4. **LSB destruction** - Original LSB relationships are completely lost
 
-**For MischiefMaker**: The combination approach maximizes both capacity and reliability, automatically selecting the best method for each image and message combination.
+**Example:**
 
-## Algorithm Components
+```
+Original pixel: 150 (LSB = 0)
+After JPEG:     142 (LSB = 0) ✓ Sometimes preserved by chance
+After JPEG:     157 (LSB = 1) ❌ LSB flipped - message destroyed
+```
 
-### **Image Processing**
+## DCT Coefficient Steganography
 
-- **Input**: Any image format (PNG, JPEG, etc.)
-- **Compression**: Convert to JPEG at 45% quality, max 1MB, max 1024px
-- **Processing**: Load as RGB pixel array for LSB modification
-- **Output**: JPEG optimized for messaging services
+### **Algorithm Strategy**
 
-### **Data Structure**
+**Target**: AC coefficients in JPEG DCT blocks
+**Method**: Modify least significant bits of non-zero AC coefficients
+**Preservation**: Keep DC coefficients unchanged for image quality
+
+### **Implementation Approach**
+
+1. **Parse JPEG** - Extract DCT coefficients using specialized libraries
+2. **Identify AC coefficients** - Find non-zero AC coefficients suitable for modification
+3. **Embed message** - Modify coefficient LSBs with message bits
+4. **Maintain structure** - Preserve JPEG compression structure
+5. **Rebuild JPEG** - Generate new JPEG with modified coefficients
+
+### **Coefficient Selection Strategy**
+
+- **Skip DC coefficients** - Preserve image luminance and color
+- **Target AC coefficients** - Modify frequency domain coefficients
+- **Avoid zero coefficients** - Only modify non-zero coefficients
+- **Redundancy encoding** - Use error correction for reliability
+
+## Data Structure
 
 ```
 [Magic Signature: 32 bits]  # "MSCH" - MischiefMaker identifier
 [Version: 8 bits]           # Algorithm version
 [Message Length: 32 bits]   # Payload size in bytes
+[Encoding Method: 8 bits]   # DCT coefficient method used
 [Checksum: 32 bits]         # CRC32 for error detection
 [Message: Variable]         # Actual secret message
 ```
 
-**Header Size**: 13 bytes (encoded with same method as message)
-
-### **LSB Configuration**
-
-- **Depth**: 1 LSB per channel (maximum invisibility)
-- **Channels**: RGB (Red, Green, Blue)
-- **Encoding**: Simple LSB first, triple redundancy fallback
-- **Capacity**: 288KB max (simple), 96KB (triple redundancy)
+**Header Size**: 14 bytes (encoded in DCT coefficients)
 
 ## Messaging Service Compatibility
 
 ### **Target Standards**
 
-Based on research and observed behavior:
+// TODO: Add max size, based on online reports, remove coefficient preservation since it's fluff.
+| Service | JPEG Quality | Coefficient Preservation |
+| -------- | ------------ | ------------------------------- |
+| iMessage | 75% quality | High AC coefficient stability |
+| WhatsApp | 65% quality | Medium AC coefficient stability |
+| SMS/MMS | 45% quality | Lower but predictable stability |
+| Telegram | 75% quality | High AC coefficient stability |
 
-| Service  | Compression Trigger | Our Pre-Compression |
-| -------- | ------------------- | ------------------- |
-| iMessage | >3MB → 75% quality  | 45% quality (safer) |
-| WhatsApp | >16MB → 65% quality | 45% quality (safer) |
-| SMS/MMS  | >1MB → 45% quality  | 45% quality (match) |
-| Telegram | >10MB → 75% quality | 45% quality (safer) |
+**Strategy**: Embed in AC coefficients that remain stable across quality ranges.
 
-**Strategy**: Target SMS/MMS standards (most restrictive) for universal compatibility.
+## Platform-Specific Implementation
+
+### **Required Libraries**
+
+**Web Platform:**
+
+- **mozjpeg.js** - JPEG parsing and DCT coefficient access
+- **jpegjs** - Alternative JPEG processing library
+- **Custom WASM** - For performance-critical operations
+
+**Mobile Platform:**
+
+- **libjpeg-turbo** - Native JPEG processing
+- **React Native bindings** - Bridge to native libraries
+- **Platform-specific** - iOS/Android native implementations
+
+**Node.js Platform:**
+
+- **sharp** - High-performance image processing
+- **libjpeg-turbo** - Direct native bindings
+- **Custom modules** - For DCT coefficient access
+
+### **Interface Definition**
+
+```typescript
+interface IDCTProcessor {
+  // Parse JPEG and extract DCT coefficients
+  extractDCTCoefficients(jpeg: Buffer): Promise<DCTCoefficients>;
+
+  // Modify DCT coefficients with message data
+  modifyCoefficients(coefficients: DCTCoefficients, message: Buffer): DCTCoefficients;
+
+  // Rebuild JPEG from modified coefficients
+  rebuildJPEG(coefficients: DCTCoefficients): Promise<Buffer>;
+
+  // Calculate capacity based on available AC coefficients
+  calculateCapacity(coefficients: DCTCoefficients): number;
+}
+
+interface DCTCoefficients {
+  blocks: DCTBlock[];
+  width: number;
+  height: number;
+  quality: number;
+}
+
+interface DCTBlock {
+  dc: number; // DC coefficient (preserved)
+  ac: number[]; // AC coefficients (modified)
+  quantTable: number[]; // Quantization table
+}
+```
+
+## Algorithm Implementation
+
+### **Encoding Process**
+
+```typescript
+async function encodeMessage(jpegImage: Buffer, message: string): Promise<Buffer> {
+  // 1. Parse JPEG structure
+  const coefficients = await extractDCTCoefficients(jpegImage);
+
+  // 2. Validate capacity
+  const capacity = calculateCapacity(coefficients);
+  if (message.length > capacity) {
+    throw new Error(`Message too large. Max: ${capacity} bytes`);
+  }
+
+  // 3. Create header
+  const messageBytes = new TextEncoder().encode(message);
+  const checksum = calculateCRC32(messageBytes);
+  const header = createHeader(messageBytes.length, 'dct-ac', checksum);
+
+  // 4. Embed header + message in AC coefficients
+  const dataToEmbed = concatenateBytes(header, messageBytes);
+  const modifiedCoefficients = modifyCoefficients(coefficients, dataToEmbed);
+
+  // 5. Rebuild JPEG
+  return await rebuildJPEG(modifiedCoefficients);
+}
+```
+
+### **Decoding Process**
+
+```typescript
+async function decodeMessage(jpegImage: Buffer): Promise<string> {
+  // 1. Parse JPEG structure
+  const coefficients = await extractDCTCoefficients(jpegImage);
+
+  // 2. Extract and validate header
+  const header = extractHeaderFromCoefficients(coefficients);
+  if (header.magic !== MAGIC_SIGNATURE) {
+    throw new Error('Not a MischiefMaker image');
+  }
+
+  // 3. Extract message from AC coefficients
+  const messageBytes = extractMessageFromCoefficients(coefficients, header);
+
+  // 4. Validate checksum
+  const calculatedChecksum = calculateCRC32(messageBytes);
+  if (calculatedChecksum !== header.checksum) {
+    throw new Error('Message corrupted - checksum mismatch');
+  }
+
+  // 5. Convert to string
+  return new TextDecoder().decode(messageBytes);
+}
+```
 
 ## Configuration
 
 ```typescript
 const ALGORITHM_CONFIG = {
-  JPEG_QUALITY: 45, // SMS/MMS compatible
-  MAX_FILE_SIZE: 1024 * 1024, // 1MB universal limit
-  MAX_DIMENSIONS: 1024, // Common dimension limit
-  LSB_DEPTH: 1, // 1 LSB per channel
-  REDUNDANCY_FACTOR: 3, // Triple encoding for fallback
   MAGIC_SIGNATURE: 0x4d534348, // "MSCH"
-  CURRENT_VERSION: 1, // Algorithm version
-  ENABLE_FALLBACK: true, // Enable combination strategy
+  CURRENT_VERSION: 2, // DCT coefficient version
+  ENCODING_METHOD: 'dct-ac', // DCT AC coefficient method
+  MIN_COEFFICIENT_VALUE: 2, // Skip small coefficients
+  MAX_COEFFICIENT_MODIFICATION: 1, // ±1 modification limit
+  REDUNDANCY_FACTOR: 3, // Triple redundancy for reliability
+  SKIP_DC_COEFFICIENTS: true, // Preserve image quality
+  TARGET_QUALITY_RANGE: [45, 85], // Compatible quality range
 };
 ```
 
-## Combination Strategy Implementation
+## Reliability Strategy
 
-### **Encoding Process Overview**
+### **Error Correction**
 
-```typescript
-async function encodeMessage(image: Buffer, message: string): Promise<Buffer> {
-  const jpegImage = await compressToJPEG(image, { quality: 45 });
+- **Triple redundancy** - Each bit stored in 3 different AC coefficients
+- **Majority voting** - Decode using most common value
+- **Coefficient validation** - Skip coefficients too small to modify reliably
+- **Checksum verification** - CRC32 validation for data integrity
 
-  try {
-    // 1. Try simple LSB first (full capacity)
-    return await encodeWithSimpleLSB(jpegImage, message);
-  } catch (capacityError) {
-    try {
-      // 2. Fall back to triple redundancy
-      return await encodeWithTripleRedundancy(jpegImage, message);
-    } catch (redundancyError) {
-      // 3. Future: adaptive LSB depth
-      throw new Error('Message too large for image');
-    }
-  }
-}
-```
+### **Quality Preservation**
 
-### **Decoding Process Overview**
-
-```typescript
-async function decodeMessage(jpegImage: Buffer): Promise<string> {
-  const pixelData = loadJPEGPixels(jpegImage);
-
-  // Detect encoding method from header metadata
-  const header = extractHeader(pixelData);
-
-  switch (header.encodingMethod) {
-    case 'simple':
-      return decodeSimpleLSB(pixelData, header);
-    case 'triple':
-      return decodeTripleRedundancy(pixelData, header);
-    default:
-      throw new Error('Unsupported encoding method');
-  }
-}
-```
-
-## Key Technical Points
-
-### **JPEG Processing Workflow**
-
-1. Load JPEG file → Decompresses to RGB pixel array
-2. Try simple LSB → If successful, use full capacity
-3. If fails → Fall back to triple redundancy
-4. Save as JPEG → Maintains compression level
-
-### **File Size Impact**
-
-- Hidden messages **replace** LSB data, don't add to file size
-- 750KB JPEG + 100KB message = ~750KB ±5KB final file
-- Message is encoded in existing pixels, not appended
-
-### **Capacity Calculation**
-
-- Based on **pixel dimensions**, not file size
-- 1024×768 image = 288KB (simple) or 96KB (triple redundancy)
-- Combination strategy maximizes capacity usage
-
-## Implementation Requirements
-
-### **Platform-Specific Interfaces**
-
-```typescript
-interface ImageProcessor {
-  compressToJPEG(image: Buffer, quality: number): Buffer;
-  loadJPEGPixels(jpeg: Buffer): Uint8Array;
-  saveJPEGFromPixels(pixels: Uint8Array, width: number, height: number): Buffer;
-}
-
-interface SteganographyEngine {
-  encodeMessage(image: Buffer, message: string): Promise<Buffer>;
-  decodeMessage(image: Buffer): Promise<string>;
-  checkCapacity(image: Buffer): Promise<number>;
-}
-```
-
-### **Core Functions Needed**
-
-- **Magic signature** detection and validation
-- **CRC32 checksum** calculation and verification
-- **Simple LSB embedding/extraction** (primary method)
-- **Triple redundancy LSB embedding/extraction** (fallback)
-- **Majority vote decoding** for error correction
-- **Encoding method detection** for proper decoding
-- **Header parsing** and creation with method metadata
-- **Capacity validation** for both encoding methods
+- **DC coefficient preservation** - Maintain image brightness and color
+- **Minimal modifications** - Only ±1 changes to AC coefficients
+- **Quantization awareness** - Respect existing quantization tables
+- **Visual quality testing** - Ensure changes remain imperceptible
 
 ## Testing Strategy
 
-### **Messaging Service Validation**
+### **Quality Assurance**
 
-- Test combination strategy across all major services
-- Verify fallback mechanism works correctly
-- Ensure optimal capacity usage in different scenarios
-- Validate visual changes remain imperceptible
+- **PSNR/SSIM testing** - Measure image quality degradation
+- **Visual inspection** - Human perceptibility testing
+- **Coefficient stability** - Track coefficient changes across quality levels
+- **Capacity optimization** - Maximize message capacity while maintaining reliability
 
-### **Error Handling**
+## Implementation Phases
 
-- Invalid magic signature detection
-- Checksum validation for data integrity
-- Capacity overflow prevention with fallback
-- Version compatibility checking
-- Encoding method detection and validation
+### **Phase 1: Research & Library Selection**
+
+- Evaluate JPEG DCT libraries for each platform
+- Test coefficient extraction and modification capabilities
+- Benchmark performance and compatibility
+
+### **Phase 2: Core Algorithm Development**
+
+- Implement DCT coefficient parsing and modification
+- Build error correction and redundancy systems
+- Create comprehensive test suite
+
+### **Phase 3: Platform Integration**
+
+- Integrate with web, mobile, and Node.js platforms
+- Implement platform-specific optimizations
+- Validate messaging service compatibility
+
+### **Phase 4: Production Optimization**
+
+- Performance optimization for real-time usage
+- Memory optimization for mobile platforms
+- User experience polish and error handling
 
 ## References
 
-For detailed implementation examples, capacity calculations, and complete code samples, see **[Image Technical Considerations](image-technical-considerations.md)**.
-
-- JPEG Standard: ISO/IEC 10918-1
-- LSB Steganography: Spatial domain embedding techniques
-- Error correction: Redundancy coding principles
-- CRC32: Industry standard error detection
+- **JPEG Standard**: ISO/IEC 10918-1 (DCT-based compression)
+- **DCT Steganography**: "Steganography in JPEG compressed images" research
+- **libjpeg-turbo**: High-performance JPEG library
+- **mozjpeg**: Mozilla's JPEG encoder optimizations
