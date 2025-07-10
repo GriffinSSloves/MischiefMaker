@@ -1,1 +1,5 @@
 node_modules
+
+# Testing
+/coverage
+core/tests/output
