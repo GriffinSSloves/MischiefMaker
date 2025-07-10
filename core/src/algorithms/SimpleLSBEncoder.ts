@@ -69,7 +69,7 @@ export class SimpleLSBEncoder implements ISimpleLSBEncoder {
    * Calculate capacity for simple LSB encoding
    */
   calculateCapacity(width: number, height: number): number {
-    return this.capacityCalculator.calculateCapacity(width, height).simpleCapacity;
+    return this.capacityCalculator.calculateCapacity(width, height, 1).capacity;
   }
 
   /**

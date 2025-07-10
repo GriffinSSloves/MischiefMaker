@@ -7,6 +7,7 @@ import { extractBits } from '../utils/PixelDataUtility/PixelDataUtility';
 import { getHeaderSizeInBits, deserializeHeader, validateHeader } from '../utils/HeaderUtility/HeaderUtility';
 import { calculateCRC32 } from '../utils/ChecksumUtility/ChecksumUtility';
 import { ALGORITHM_CONSTANTS } from '../types/Constants';
+import { bitsToBytes } from '../utils/BitOperations/BitOperations';
 
 /**
  * Triple redundancy LSB decoder implementation
@@ -136,7 +137,7 @@ export class TripleRedundancyDecoder implements ITripleRedundancyDecoder {
     const messageBits = this.applyMajorityVoting(redundantMessageBits, redundancyFactor);
 
     // Convert message bits to bytes
-    const messageData = this.bitsToBytes(messageBits);
+    const messageData = bitsToBytes(messageBits);
 
     // Validate the extracted message - checksum after majority vote
     const validation = await this.validateMessage(messageData, header);
@@ -171,25 +172,5 @@ export class TripleRedundancyDecoder implements ITripleRedundancyDecoder {
     }
 
     return originalBits;
-  }
-
-  /**
-   * Convert array of bits to Uint8Array
-   */
-  private bitsToBytes(bits: number[]): Uint8Array {
-    const bytes = new Uint8Array(Math.ceil(bits.length / 8));
-
-    for (let i = 0; i < bits.length; i += 8) {
-      let byte = 0;
-      for (let j = 0; j < 8; j++) {
-        byte = byte << 1;
-        if (i + j < bits.length) {
-          byte = byte | (bits[i + j] || 0);
-        }
-      }
-      bytes[i / 8] = byte;
-    }
-
-    return bytes;
   }
 }

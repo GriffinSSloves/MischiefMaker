@@ -17,9 +17,6 @@ export interface AlgorithmConfig {
   /** Redundancy factor for error correction (typically 3) */
   redundancyFactor: number;
 
-  /** Safety margin for capacity calculations (0.0 to 1.0) */
-  safetyMargin: number;
-
   /** Whether to use compression before encoding */
   useCompression: boolean;
 

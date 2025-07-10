@@ -85,8 +85,8 @@ const pixelDataSize = totalPixels * channels; // 2,359,296 bytes (2.3MB when dec
 
 // 3. Calculate message capacity with redundancy
 const availableBits = totalPixels * channels * lsbDepth; // 2,359,296 bits
-const effectiveBits = Math.floor(availableBits / redundancyFactor); // 786,432 bits after redundancy
-const messageCapacity = Math.floor(effectiveBits / 8) - 13; // 98,291 bytes ≈ 96KB
+const bitsAfterRedundancy = Math.floor(availableBits / redundancyFactor); // 786,432 bits after redundancy
+const messageCapacity = Math.floor(bitsAfterRedundancy / 8) - 13; // 98,291 bytes ≈ 96KB
 // (minus 13 bytes for header)
 
 // Result: 96KB message capacity from 2.3MB pixel data = 4% capacity with triple redundancy

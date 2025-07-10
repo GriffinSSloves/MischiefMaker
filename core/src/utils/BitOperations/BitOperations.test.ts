@@ -18,6 +18,7 @@ import {
   areValidBits,
   xorBits,
   calculateSimpleChecksum,
+  bitsToBytes,
 } from './BitOperations';
 
 describe('BitOperations', () => {
@@ -290,6 +291,136 @@ describe('BitOperations', () => {
       ];
       const checksum = calculateSimpleChecksum(bits);
       expect(checksum).toBe(0);
+    });
+  });
+
+  describe('bitsToBytes conversion', () => {
+    it('should convert 8 bits to 1 byte correctly', () => {
+      const bits = [1, 0, 1, 0, 1, 0, 1, 0]; // 0b10101010 = 170
+      const bytes = bitsToBytes(bits);
+      expect(bytes.length).toBe(1);
+      expect(bytes[0]).toBe(170);
+    });
+
+    it('should convert 16 bits to 2 bytes correctly', () => {
+      const bits = [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1, // 0b11111111 = 255
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0, // 0b00000000 = 0
+      ];
+      const bytes = bitsToBytes(bits);
+      expect(bytes.length).toBe(2);
+      expect(bytes[0]).toBe(255);
+      expect(bytes[1]).toBe(0);
+    });
+
+    it('should pad incomplete bytes with zeros', () => {
+      const bits = [1, 0, 1]; // Should become 0b10100000 = 160
+      const bytes = bitsToBytes(bits);
+      expect(bytes.length).toBe(1);
+      expect(bytes[0]).toBe(160);
+    });
+
+    it('should handle empty bit arrays', () => {
+      const bits: number[] = [];
+      const bytes = bitsToBytes(bits);
+      expect(bytes.length).toBe(0);
+    });
+
+    it('should handle single bit', () => {
+      const bits = [1]; // Should become 0b10000000 = 128
+      const bytes = bitsToBytes(bits);
+      expect(bytes.length).toBe(1);
+      expect(bytes[0]).toBe(128);
+    });
+
+    it('should handle various bit lengths', () => {
+      // Test with different bit lengths
+      const testCases = [
+        { bits: [1, 0, 1, 0, 1], expected: [168] }, // 0b10101000 = 168
+        { bits: [1, 1, 1, 1, 0, 0, 0, 0, 1], expected: [240, 128] }, // 0b11110000 = 240, 0b10000000 = 128
+        { bits: [0, 1, 0, 1, 0, 1, 0, 1, 1, 1], expected: [85, 192] }, // 0b01010101 = 85, 0b11000000 = 192
+      ];
+
+      testCases.forEach(({ bits, expected }) => {
+        const bytes = bitsToBytes(bits);
+        expect(bytes.length).toBe(expected.length);
+        expected.forEach((expectedByte, index) => {
+          expect(bytes[index]).toBe(expectedByte);
+        });
+      });
+    });
+
+    it('should handle realistic message data', () => {
+      // Simulate ASCII "Hi" = [72, 105] = [0b01001000, 0b01101001]
+      const bits = [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0, // 72 ('H')
+        0,
+        1,
+        1,
+        0,
+        1,
+        0,
+        0,
+        1, // 105 ('i')
+      ];
+      const bytes = bitsToBytes(bits);
+      expect(bytes.length).toBe(2);
+      expect(bytes[0]).toBe(72);
+      expect(bytes[1]).toBe(105);
+
+      // Convert back to string to verify
+      const text = String.fromCharCode(...bytes);
+      expect(text).toBe('Hi');
+    });
+
+    it('should be consistent with individual byte conversion', () => {
+      // Test that bitsToBytes gives same result as multiple bitsToByte calls
+      const bits = [
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0, // First byte
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0, // Second byte
+      ];
+
+      const bytes = bitsToBytes(bits);
+      const firstByte = bitsToByte(bits.slice(0, 8));
+      const secondByte = bitsToByte(bits.slice(8, 16));
+
+      expect(bytes[0]).toBe(firstByte);
+      expect(bytes[1]).toBe(secondByte);
     });
   });
 });

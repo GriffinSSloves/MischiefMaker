@@ -223,3 +223,25 @@ export function xorBits(bits1: number[], bits2: number[]): number[] {
 export function calculateSimpleChecksum(bits: number[]): number {
   return bits.reduce((checksum, bit) => checksum ^ bit, 0);
 }
+
+/**
+ * Convert an array of bits to a Uint8Array
+ * Each group of 8 bits becomes one byte (MSB first)
+ * If the bit array length is not a multiple of 8, the last byte is padded with zeros
+ */
+export function bitsToBytes(bits: number[]): Uint8Array {
+  const bytes = new Uint8Array(Math.ceil(bits.length / 8));
+
+  for (let i = 0; i < bits.length; i += 8) {
+    let byte = 0;
+    for (let j = 0; j < 8; j++) {
+      byte = byte << 1;
+      if (i + j < bits.length) {
+        byte = byte | (bits[i + j] || 0);
+      }
+    }
+    bytes[i / 8] = byte;
+  }
+
+  return bytes;
+}

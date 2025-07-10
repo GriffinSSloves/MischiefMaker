@@ -17,7 +17,6 @@ export const ALGORITHM_CONSTANTS: AlgorithmConfig = {
   redundancyFactor: 3, // Triple encoding for fallback reliability
 
   // Capacity and compression settings
-  safetyMargin: 0.95, // 95% safety margin for capacity calculations
   useCompression: false, // Disable compression for maximum compatibility
 
   // MischiefMaker identification

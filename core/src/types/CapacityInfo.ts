@@ -8,14 +8,8 @@ export interface CapacityInfo {
   /** Total available bits for encoding */
   availableBits: number;
 
-  /** Effective bits after redundancy/overhead */
-  effectiveBits: number;
-
-  /** Maximum message capacity in bytes (simple LSB) */
-  simpleCapacity: number;
-
-  /** Maximum message capacity in bytes (triple redundancy) */
-  tripleCapacity: number;
+  /** Maximum message capacity in bytes for the specified redundancy factor */
+  capacity: number;
 
   /** Header overhead in bytes */
   headerSize: number;

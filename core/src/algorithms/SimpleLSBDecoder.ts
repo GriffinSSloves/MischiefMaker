@@ -6,6 +6,7 @@ import type { LSBConfig } from '../types/LSBConfig';
 import { extractBits } from '../utils/PixelDataUtility/PixelDataUtility';
 import { getHeaderSizeInBits, deserializeHeader, validateHeader } from '../utils/HeaderUtility/HeaderUtility';
 import { calculateCRC32 } from '../utils/ChecksumUtility/ChecksumUtility';
+import { bitsToBytes } from '../utils/BitOperations/BitOperations';
 
 /**
  * Simple LSB decoder implementation
@@ -101,7 +102,7 @@ export class SimpleLSBDecoder implements ISimpleLSBDecoder {
     const messageBits = allBits.slice(headerSizeInBits);
 
     // Convert message bits to bytes
-    const messageData = this.bitsToBytes(messageBits);
+    const messageData = bitsToBytes(messageBits);
 
     // Validate the extracted message
     const validation = await this.validateMessage(messageData, header);
@@ -110,25 +111,5 @@ export class SimpleLSBDecoder implements ISimpleLSBDecoder {
     }
 
     return messageData;
-  }
-
-  /**
-   * Convert array of bits to Uint8Array
-   */
-  private bitsToBytes(bits: number[]): Uint8Array {
-    const bytes = new Uint8Array(Math.ceil(bits.length / 8));
-
-    for (let i = 0; i < bits.length; i += 8) {
-      let byte = 0;
-      for (let j = 0; j < 8; j++) {
-        byte = byte << 1;
-        if (i + j < bits.length) {
-          byte = byte | (bits[i + j] || 0);
-        }
-      }
-      bytes[i / 8] = byte;
-    }
-
-    return bytes;
   }
 }

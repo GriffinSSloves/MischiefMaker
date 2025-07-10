@@ -78,7 +78,7 @@ export class TripleRedundancyEncoder implements ITripleRedundancyEncoder {
    * Calculate capacity for triple redundancy encoding
    */
   calculateCapacity(width: number, height: number): number {
-    return this.capacityCalculator.calculateCapacity(width, height).tripleCapacity;
+    return this.capacityCalculator.calculateCapacity(width, height, 3).capacity;
   }
 
   /**
