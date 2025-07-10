@@ -161,6 +161,56 @@ This document tracks key architectural and technology decisions made during deve
 - **Automatic optimization**: No user intervention required
 - **Future extensibility**: Ready for adaptive LSB depth enhancement
 
+## ADR-008: Checksum Timing in Steganography Systems
+
+**Date**: 2025-01-27
+**Status**: Accepted
+**Context**: During algorithm implementation, systematic checksum failures occurred when validating decoded messages. Initial implementation calculated checksums on original message bytes but validated them after image compression, causing all checksum validations to fail.
+**Decision**: Calculate checksums on post-processing data rather than pre-compression data
+**Rationale**:
+
+**The Problem**: Image compression (JPEG, messaging services) modifies pixel values, changing the LSB data that carries the message bits. Checksums calculated on pre-compression data will never match post-compression validation.
+
+**Why This Fails**:
+
+- Original approach: Calculate checksum on raw message bytes before encoding
+- Validation approach: Calculate checksum on bits after extraction and decompression
+- Result: Checksums never match due to compression artifacts
+
+**The Solution**: Calculate checksums on post-processing data:
+
+- **Triple Redundancy**: Calculate checksum on bits after majority vote (corruption-resistant)
+- **Simple LSB**: Calculate checksum on bits after extraction (compression-resistant)
+- **Timing**: Checksum validation occurs on the same data state as checksum calculation
+
+**Implementation**: The `TripleRedundancyDecoder` now calculates checksums on majority-voted bits rather than final decoded bytes, properly handling scenarios where images are compressed after encoding.
+
+**Impact**: This architecture fix resolved systematic checksum failures and enables steganography to work reliably with compressed images in messaging applications.
+
+## ADR-009: Capacity Utilization Philosophy
+
+**Date**: 2025-01-27
+**Status**: Accepted
+**Context**: Initial implementation used 0.95 safety margin, limiting capacity to 95% of theoretical maximum without clear technical justification.
+**Decision**: Use full image capacity (100%) with proper validation rather than arbitrary safety margins
+**Rationale**:
+
+**Problem with Safety Margins**: Arbitrary safety margins reduce available capacity without clear technical justification, limiting user utility.
+
+**New Approach**: Use full image capacity (100%) with proper validation:
+
+- **Validation**: Check message size against actual capacity before encoding
+- **Error Handling**: Provide clear error messages when capacity is exceeded
+- **Transparency**: Let users know exactly how much capacity is available
+- **No Hidden Limits**: Avoid arbitrary 95% limits or unexplained capacity reductions
+
+**Benefits**:
+
+- **Maximizes utility**: Users get full benefit of image capacity
+- **Maintains reliability**: Proper validation prevents errors without arbitrary limitations
+- **Transparency**: Clear capacity reporting and error messages
+- **Flexibility**: Users can make informed decisions about message size vs. image selection
+
 ## Future Decisions
 
 Additional decisions will be documented here as the project evolves:

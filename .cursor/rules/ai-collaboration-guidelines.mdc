@@ -119,6 +119,14 @@ This keeps strategic documents focused and implementation details accessible.
 - ✅ Consistent, predictable behavior
 - ✅ Can target specific test files: `pnpm run test:run path/to/test.ts`
 
+**Critical Testing Insights for AI:**
+
+- **Behavior-focused testing** catches real bugs better than over-mocked tests
+- **Over-mocking hides bugs** - prefer testing actual workflows over mocked implementations
+- **Real dependencies** should be used for core domain logic (BitOperations, utilities)
+- **Mock only external dependencies** like file systems, network calls, or slow operations
+- **Unit tests** + focused unit tests > heavily mocked unit tests
+
 ## Communication Style
 
 ### 14. Educational Explanations

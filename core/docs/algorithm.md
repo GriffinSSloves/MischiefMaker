@@ -164,7 +164,7 @@ async function decodeMessage(jpegImage: Buffer): Promise<string> {
 ### **Capacity Calculation**
 
 - Based on **pixel dimensions**, not file size
-- 1024×768 image = ~288KB (simple) or ~96KB (triple redundancy)
+- 1024×768 image = 288KB (simple) or 96KB (triple redundancy)
 - Combination strategy maximizes capacity usage
 
 ## Implementation Requirements
