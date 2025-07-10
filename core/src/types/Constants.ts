@@ -74,20 +74,11 @@ export const CAPACITY_CONSTANTS = {
 } as const;
 
 /**
- * Messaging service compatibility constants
+ * JPEG image compression constants for output images.
  */
-export const MESSAGING_SERVICE_CONSTANTS = {
-  /** iMessage compression trigger and quality */
-  IMESSAGE: { trigger: 3 * 1024 * 1024, quality: 75 },
-
-  /** WhatsApp compression trigger and quality */
-  WHATSAPP: { trigger: 16 * 1024 * 1024, quality: 65 },
-
-  /** SMS/MMS compression trigger and quality */
-  SMS_MMS: { trigger: 1 * 1024 * 1024, quality: 45 },
-
-  /** Telegram compression trigger and quality */
-  TELEGRAM: { trigger: 10 * 1024 * 1024, quality: 75 },
+export const IMAGE_COMPRESSION_CONSTANTS = {
+  maxSize: 1 * 1024 * 1024,
+  quality: 45,
 } as const;
 
 /**
