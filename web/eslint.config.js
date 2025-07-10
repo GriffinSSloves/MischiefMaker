@@ -37,6 +37,7 @@ export default [
         localStorage: 'readonly',
         sessionStorage: 'readonly',
         fetch: 'readonly',
+        performance: 'readonly',
       },
     },
   },

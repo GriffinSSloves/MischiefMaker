@@ -45,3 +45,6 @@ export { SimpleLSBEncoder } from './algorithms/SimpleLSBEncoder';
 export { SimpleLSBDecoder } from './algorithms/SimpleLSBDecoder';
 export { TripleRedundancyEncoder } from './algorithms/TripleRedundancyEncoder';
 export { TripleRedundancyDecoder } from './algorithms/TripleRedundancyDecoder';
+
+// Services
+export { SteganographyEngine } from './services/SteganographyEngine';

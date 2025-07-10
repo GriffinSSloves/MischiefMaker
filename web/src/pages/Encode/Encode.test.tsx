@@ -15,7 +15,10 @@ describe('Encode', () => {
 
   it('contains the encode form or interface elements', () => {
     renderWithRouterHelpers.encode(<Encode />);
-    // This test will need to be updated when the actual encode interface is implemented
-    expect(screen.getByText(/encode/i)).toBeInTheDocument();
+    // Check for specific elements by their unique text
+    expect(screen.getByText('Encode Secret Message')).toBeInTheDocument();
+    expect(screen.getByText('1. Choose Image')).toBeInTheDocument();
+    expect(screen.getByText('2. Enter Secret Message')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Encode Message' })).toBeInTheDocument();
   });
 });

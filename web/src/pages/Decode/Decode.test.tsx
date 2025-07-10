@@ -15,7 +15,10 @@ describe('Decode', () => {
 
   it('contains the decode form or interface elements', () => {
     renderWithRouterHelpers.decode(<Decode />);
-    // This test will need to be updated when the actual decode interface is implemented
-    expect(screen.getByText(/decode/i)).toBeInTheDocument();
+    // Check for specific elements by their unique text
+    expect(screen.getByText('Decode Secret Message')).toBeInTheDocument();
+    expect(screen.getByText('1. Choose Encoded Image')).toBeInTheDocument();
+    expect(screen.getByText('2. Extract Hidden Message')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decode Message' })).toBeInTheDocument();
   });
 });
