@@ -152,11 +152,13 @@ The core package is automatically linked during development:
 
 ### ImageProcessor Interface
 
-Minimal interface for image manipulation operations:
+Minimal interface for image manipulation operations with clear, workflow-specific function names:
 
-- Load images from buffers
-- Access and modify pixel data
-- Convert images back to buffers
+- **Preprocess images** - Convert any format to JPEG with steganography-optimized compression
+- **Decompress JPEGs** - Convert JPEG to intermediate format for processing
+- **Convert pixel data** - Transform intermediate format to LSB-ready pixel data
+- **Apply modifications** - Update intermediate format with modified pixel data
+- **Compress to JPEG** - Generate final JPEG output
 
 ### FileSystem Interface
 

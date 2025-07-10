@@ -7,29 +7,30 @@ import type { PixelData } from '../types/PixelData';
  */
 export interface IImageProcessor {
   /**
-   * Load an image from buffer data and return pixel information
+   * Preprocess any image format to JPEG with steganography-optimized compression
+   * Applies quality, size, and dimension constraints for messaging service compatibility
    */
-  loadImage(buffer: ArrayBuffer): Promise<IImageData>;
+  preprocessImageToJPEG(buffer: ArrayBuffer, options: CompressionOptions): Promise<ArrayBuffer>;
 
   /**
-   * Compress image to JPEG with specified options for messaging compatibility
+   * Decompress JPEG to intermediate image data format for pixel manipulation
    */
-  compressToJPEG(buffer: ArrayBuffer, options: CompressionOptions): Promise<ArrayBuffer>;
+  decompressJPEG(jpegBuffer: ArrayBuffer): Promise<IImageData>;
 
   /**
-   * Extract RGB pixel data from image for LSB manipulation
+   * Convert intermediate image data to RGB pixel data for LSB manipulation
    */
-  extractPixelData(imageData: IImageData): Promise<PixelData>;
+  convertToPixelData(imageData: IImageData): Promise<PixelData>;
 
   /**
-   * Apply modified pixel data back to image
+   * Apply modified pixel data back to intermediate image data format
    */
   applyPixelData(imageData: IImageData, pixelData: PixelData): Promise<IImageData>;
 
   /**
-   * Convert image to buffer in specified format
+   * Compress intermediate image data to final JPEG format
    */
-  imageToBuffer(imageData: IImageData, format: ImageFormat, quality?: number): Promise<ArrayBuffer>;
+  compressToJPEG(imageData: IImageData, quality: number): Promise<ArrayBuffer>;
 
   /**
    * Get image dimensions without full loading (for capacity calculations)
