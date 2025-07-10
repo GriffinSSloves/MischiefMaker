@@ -32,6 +32,9 @@ importers:
       f5stegojs:
         specifier: ^0.1.2
         version: 0.1.2
+      jp3g:
+        specifier: ^0.0.7
+        version: 0.0.7
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -2783,6 +2786,9 @@ packages:
   jiti@2.4.2:
     resolution: {integrity: sha512-rg9zJN+G4n2nfJl5MW3BMygZX56zKPNVEYYqq7adpmMh4Jn2QNEwhvQlFy6jPVdcod7txZtKHWnyZiA3a0zP7A==}
     hasBin: true
+
+  jp3g@0.0.7:
+    resolution: {integrity: sha512-w7HmjdPMUFFIRusAlu5JiwKp/xJdip8od+GDfmQ//0levKKB4aiedqD+KYU8nPYi2LU0AS+jiK7WoTkrpma2+w==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -6496,6 +6502,8 @@ snapshots:
       '@isaacs/cliui': 8.0.2
 
   jiti@2.4.2: {}
+
+  jp3g@0.0.7: {}
 
   js-tokens@4.0.0: {}
 
