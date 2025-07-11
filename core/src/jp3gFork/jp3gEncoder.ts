@@ -51,6 +51,8 @@ import {
 import { Y_LUMA_QT_BASE, UV_CHROMA_QT_BASE, AA_SF } from './quantTables';
 import { computeHuffmanTable, generateHuffmanNrcodesValues } from './huffmanUtils';
 import { buildCategoryAndBitcode } from './bitcodeUtils';
+import { buildRgbYuvLookupTable } from './colorTables';
+import { buildQuantTables } from './quantUtils';
 
 var btoa =
   btoa ||
@@ -99,35 +101,11 @@ function JPEGEncoder(quality) {
   var std_ac_chrominance_values = Array.from(STD_AC_CHROMINANCE_VALUES);
 
   function initQuantTables(sf) {
-    var YQT = Y_LUMA_QT_BASE;
-    for (var i = 0; i < 64; i++) {
-      var t = ffloor((YQT[i] * sf + 50) / 100);
-      if (t < 1) {
-        t = 1;
-      } else if (t > 255) {
-        t = 255;
-      }
-      YTable[ZigZag[i]] = t;
-    }
-    var UVQT = UV_CHROMA_QT_BASE;
-    for (var j = 0; j < 64; j++) {
-      var u = ffloor((UVQT[j] * sf + 50) / 100);
-      if (u < 1) {
-        u = 1;
-      } else if (u > 255) {
-        u = 255;
-      }
-      UVTable[ZigZag[j]] = u;
-    }
-    var aasf = AA_SF;
-    var k = 0;
-    for (var row = 0; row < 8; row++) {
-      for (var col = 0; col < 8; col++) {
-        fdtbl_Y[k] = 1.0 / (YTable[ZigZag[k]] * aasf[row] * aasf[col] * 8.0);
-        fdtbl_UV[k] = 1.0 / (UVTable[ZigZag[k]] * aasf[row] * aasf[col] * 8.0);
-        k++;
-      }
-    }
+    const { YTable: yT, UVTable: uvT, fdtbl_Y: fdY, fdtbl_UV: fdUV } = buildQuantTables(sf);
+    YTable = yT as any;
+    UVTable = uvT as any;
+    fdtbl_Y = fdY as any;
+    fdtbl_UV = fdUV as any;
   }
 
   const computeHuffmanTbl = computeHuffmanTable as any;
@@ -146,16 +124,7 @@ function JPEGEncoder(quality) {
   }
 
   function initRGBYUVTable() {
-    for (var i = 0; i < 256; i++) {
-      RGB_YUV_TABLE[i] = 19595 * i;
-      RGB_YUV_TABLE[(i + 256) >> 0] = 38470 * i;
-      RGB_YUV_TABLE[(i + 512) >> 0] = 7471 * i + 0x8000;
-      RGB_YUV_TABLE[(i + 768) >> 0] = -11059 * i;
-      RGB_YUV_TABLE[(i + 1024) >> 0] = -21709 * i;
-      RGB_YUV_TABLE[(i + 1280) >> 0] = 32768 * i + 0x807fff;
-      RGB_YUV_TABLE[(i + 1536) >> 0] = -27439 * i;
-      RGB_YUV_TABLE[(i + 1792) >> 0] = -5329 * i;
-    }
+    RGB_YUV_TABLE = buildRgbYuvLookupTable() as any;
   }
 
   // IO functions
