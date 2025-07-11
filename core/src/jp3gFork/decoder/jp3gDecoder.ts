@@ -26,61 +26,28 @@
 //   in PostScript Level 2, Technical Note #5116
 //   (partners.adobe.com/public/developer/en/ps/sdk/5116.DCT_Filter.pdf)
 
+import {
+  DCT_ZIG_ZAG as dctZigZag,
+  DCT_COS1 as dctCos1,
+  DCT_SIN1 as dctSin1,
+  DCT_COS3 as dctCos3,
+  DCT_SIN3 as dctSin3,
+  DCT_COS6 as dctCos6,
+  DCT_SIN6 as dctSin6,
+  DCT_SQRT2 as dctSqrt2,
+  DCT_SQRT1D2 as dctSqrt1d2,
+} from '../constants/decoderConstants';
+
+import { buildHuffmanTable as buildHuffmanTableUtil } from './utils/huffmanTable';
+import { requestMemoryAllocation, resetMaxMemoryUsage, getBytesAllocated } from './utils/memoryManager';
+
 var JpegImage = (function jpegImage() {
   'use strict';
-  var dctZigZag = new Int32Array([
-    0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21,
-    28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54,
-    47, 55, 62, 63,
-  ]);
-
-  var dctCos1 = 4017; // cos(pi/16)
-  var dctSin1 = 799; // sin(pi/16)
-  var dctCos3 = 3406; // cos(3*pi/16)
-  var dctSin3 = 2276; // sin(3*pi/16)
-  var dctCos6 = 1567; // cos(6*pi/16)
-  var dctSin6 = 3784; // sin(6*pi/16)
-  var dctSqrt2 = 5793; // sqrt(2)
-  var dctSqrt1d2 = 2896; // sqrt(2) / 2
 
   function constructor() {}
 
-  function buildHuffmanTable(codeLengths, values) {
-    var k = 0,
-      code = [],
-      i,
-      j,
-      length = 16;
-    while (length > 0 && !codeLengths[length - 1]) length--;
-    code.push({ children: [], index: 0 });
-    var p = code[0],
-      q;
-    for (i = 0; i < length; i++) {
-      for (j = 0; j < codeLengths[i]; j++) {
-        p = code.pop();
-        p.children[p.index] = values[k];
-        while (p.index > 0) {
-          if (code.length === 0) throw new Error('Could not recreate Huffman Table');
-          p = code.pop();
-        }
-        p.index++;
-        code.push(p);
-        while (code.length <= i) {
-          code.push((q = { children: [], index: 0 }));
-          p.children[p.index] = q.children;
-          p = q;
-        }
-        k++;
-      }
-      if (i + 1 < length) {
-        // p here points to last code
-        code.push((q = { children: [], index: 0 }));
-        p.children[p.index] = q.children;
-        p = q;
-      }
-    }
-    return code[0].children;
-  }
+  // Huffman decode-tree builder now imported from shared util.
+  const buildHuffmanTable = buildHuffmanTableUtil;
 
   function decodeScan(
     data,
@@ -1121,28 +1088,9 @@ var JpegImage = (function jpegImage() {
     },
   };
 
-  // We cap the amount of memory used by jpeg-js to avoid unexpected OOMs from untrusted content.
-  var totalBytesAllocated = 0;
-  var maxMemoryUsageBytes = 0;
-  function requestMemoryAllocation(increaseAmount = 0) {
-    var totalMemoryImpactBytes = totalBytesAllocated + increaseAmount;
-    if (totalMemoryImpactBytes > maxMemoryUsageBytes) {
-      var exceededAmount = Math.ceil((totalMemoryImpactBytes - maxMemoryUsageBytes) / 1024 / 1024);
-      throw new Error(`maxMemoryUsageInMB limit exceeded by at least ${exceededAmount}MB`);
-    }
-
-    totalBytesAllocated = totalMemoryImpactBytes;
-  }
-
-  constructor.resetMaxMemoryUsage = function (maxMemoryUsageBytes_) {
-    totalBytesAllocated = 0;
-    maxMemoryUsageBytes = maxMemoryUsageBytes_;
-  };
-
-  constructor.getBytesAllocated = function () {
-    return totalBytesAllocated;
-  };
-
+  // Memory guard helpers are now provided by shared util.
+  constructor.resetMaxMemoryUsage = resetMaxMemoryUsage;
+  constructor.getBytesAllocated = getBytesAllocated;
   constructor.requestMemoryAllocation = requestMemoryAllocation;
 
   return constructor;
