@@ -53,6 +53,8 @@ import { computeHuffmanTable, generateHuffmanNrcodesValues } from './huffmanUtil
 import { buildCategoryAndBitcode } from './bitcodeUtils';
 import { buildRgbYuvLookupTable } from './colorTables';
 import { buildQuantTables } from './quantUtils';
+import { fDCTQuant as dctQuant } from './dctUtils';
+import { BitWriter } from './BitWriter';
 
 var btoa =
   btoa ||
@@ -77,9 +79,8 @@ function JPEGEncoder(quality) {
   var category = new Array(65535);
   var outputfDCTQuant = new Array(64);
   var DU = new Array(64);
-  var byteout = [];
-  var bytenew = 0;
-  var bytepos = 7;
+
+  const bitWriter = new BitWriter();
 
   var YDU = new Array(64);
   var UDU = new Array(64);
@@ -129,165 +130,19 @@ function JPEGEncoder(quality) {
 
   // IO functions
   function writeBits(bs) {
-    var value = bs[0];
-    var posval = bs[1] - 1;
-    while (posval >= 0) {
-      if (value & (1 << posval)) {
-        bytenew |= 1 << bytepos;
-      }
-      posval--;
-      bytepos--;
-      if (bytepos < 0) {
-        if (bytenew == 0xff) {
-          writeByte(0xff);
-          writeByte(0);
-        } else {
-          writeByte(bytenew);
-        }
-        bytepos = 7;
-        bytenew = 0;
-      }
-    }
+    bitWriter.writeBits(bs);
   }
 
   function writeByte(value) {
-    //byteout.push(clt[value]); // write char directly instead of converting later
-    byteout.push(value);
+    bitWriter.writeByte(value);
   }
 
   function writeWord(value) {
-    writeByte((value >> 8) & 0xff);
-    writeByte(value & 0xff);
+    bitWriter.writeWord(value);
   }
 
-  // DCT & quantization core
-  function fDCTQuant(data, fdtbl) {
-    var d0, d1, d2, d3, d4, d5, d6, d7;
-    /* Pass 1: process rows. */
-    var dataOff = 0;
-    var i;
-    var I8 = 8;
-    var I64 = 64;
-    for (i = 0; i < I8; ++i) {
-      d0 = data[dataOff];
-      d1 = data[dataOff + 1];
-      d2 = data[dataOff + 2];
-      d3 = data[dataOff + 3];
-      d4 = data[dataOff + 4];
-      d5 = data[dataOff + 5];
-      d6 = data[dataOff + 6];
-      d7 = data[dataOff + 7];
-
-      var tmp0 = d0 + d7;
-      var tmp7 = d0 - d7;
-      var tmp1 = d1 + d6;
-      var tmp6 = d1 - d6;
-      var tmp2 = d2 + d5;
-      var tmp5 = d2 - d5;
-      var tmp3 = d3 + d4;
-      var tmp4 = d3 - d4;
-
-      /* Even part */
-      var tmp10 = tmp0 + tmp3; /* phase 2 */
-      var tmp13 = tmp0 - tmp3;
-      var tmp11 = tmp1 + tmp2;
-      var tmp12 = tmp1 - tmp2;
-
-      data[dataOff] = tmp10 + tmp11; /* phase 3 */
-      data[dataOff + 4] = tmp10 - tmp11;
-
-      var z1 = (tmp12 + tmp13) * 0.707106781; /* c4 */
-      data[dataOff + 2] = tmp13 + z1; /* phase 5 */
-      data[dataOff + 6] = tmp13 - z1;
-
-      /* Odd part */
-      tmp10 = tmp4 + tmp5; /* phase 2 */
-      tmp11 = tmp5 + tmp6;
-      tmp12 = tmp6 + tmp7;
-
-      /* The rotator is modified from fig 4-8 to avoid extra negations. */
-      var z5 = (tmp10 - tmp12) * 0.382683433; /* c6 */
-      var z2 = 0.5411961 * tmp10 + z5; /* c2-c6 */
-      var z4 = 1.306562965 * tmp12 + z5; /* c2+c6 */
-      var z3 = tmp11 * 0.707106781; /* c4 */
-
-      var z11 = tmp7 + z3; /* phase 5 */
-      var z13 = tmp7 - z3;
-
-      data[dataOff + 5] = z13 + z2; /* phase 6 */
-      data[dataOff + 3] = z13 - z2;
-      data[dataOff + 1] = z11 + z4;
-      data[dataOff + 7] = z11 - z4;
-
-      dataOff += 8; /* advance pointer to next row */
-    }
-
-    /* Pass 2: process columns. */
-    dataOff = 0;
-    for (i = 0; i < I8; ++i) {
-      d0 = data[dataOff];
-      d1 = data[dataOff + 8];
-      d2 = data[dataOff + 16];
-      d3 = data[dataOff + 24];
-      d4 = data[dataOff + 32];
-      d5 = data[dataOff + 40];
-      d6 = data[dataOff + 48];
-      d7 = data[dataOff + 56];
-
-      var tmp0p2 = d0 + d7;
-      var tmp7p2 = d0 - d7;
-      var tmp1p2 = d1 + d6;
-      var tmp6p2 = d1 - d6;
-      var tmp2p2 = d2 + d5;
-      var tmp5p2 = d2 - d5;
-      var tmp3p2 = d3 + d4;
-      var tmp4p2 = d3 - d4;
-
-      /* Even part */
-      var tmp10p2 = tmp0p2 + tmp3p2; /* phase 2 */
-      var tmp13p2 = tmp0p2 - tmp3p2;
-      var tmp11p2 = tmp1p2 + tmp2p2;
-      var tmp12p2 = tmp1p2 - tmp2p2;
-
-      data[dataOff] = tmp10p2 + tmp11p2; /* phase 3 */
-      data[dataOff + 32] = tmp10p2 - tmp11p2;
-
-      var z1p2 = (tmp12p2 + tmp13p2) * 0.707106781; /* c4 */
-      data[dataOff + 16] = tmp13p2 + z1p2; /* phase 5 */
-      data[dataOff + 48] = tmp13p2 - z1p2;
-
-      /* Odd part */
-      tmp10p2 = tmp4p2 + tmp5p2; /* phase 2 */
-      tmp11p2 = tmp5p2 + tmp6p2;
-      tmp12p2 = tmp6p2 + tmp7p2;
-
-      /* The rotator is modified from fig 4-8 to avoid extra negations. */
-      var z5p2 = (tmp10p2 - tmp12p2) * 0.382683433; /* c6 */
-      var z2p2 = 0.5411961 * tmp10p2 + z5p2; /* c2-c6 */
-      var z4p2 = 1.306562965 * tmp12p2 + z5p2; /* c2+c6 */
-      var z3p2 = tmp11p2 * 0.707106781; /* c4 */
-
-      var z11p2 = tmp7p2 + z3p2; /* phase 5 */
-      var z13p2 = tmp7p2 - z3p2;
-
-      data[dataOff + 40] = z13p2 + z2p2; /* phase 6 */
-      data[dataOff + 24] = z13p2 - z2p2;
-      data[dataOff + 8] = z11p2 + z4p2;
-      data[dataOff + 56] = z11p2 - z4p2;
-
-      dataOff++; /* advance pointer to next column */
-    }
-
-    // Quantize/descale the coefficients
-    var fDCTQuant;
-    for (i = 0; i < I64; ++i) {
-      // Apply the quantization and scaling factor & Round to nearest integer
-      fDCTQuant = data[i] * fdtbl[i];
-      outputfDCTQuant[i] = fDCTQuant > 0.0 ? (fDCTQuant + 0.5) | 0 : (fDCTQuant - 0.5) | 0;
-      //outputfDCTQuant[i] = fround(fDCTQuant);
-    }
-    return outputfDCTQuant;
-  }
+  // DCT & quantization core – delegate to shared util
+  const fDCTQuant = dctQuant;
 
   function writeAPP0() {
     writeWord(0xffe0); // marker
@@ -669,9 +524,7 @@ function JPEGEncoder(quality) {
     if (quality) setQuality(quality);
 
     // Initialize bit writer
-    byteout = new Array();
-    bytenew = 0;
-    bytepos = 7;
+    bitWriter.reset();
 
     // Add JPEG headers
     writeWord(0xffd8); // SOI
@@ -687,11 +540,6 @@ function JPEGEncoder(quality) {
     var DCY = 0;
     var DCU = 0;
     var DCV = 0;
-
-    bytenew = 0;
-    bytepos = 7;
-
-    this.encode.displayName = '_encode_';
 
     var imageData = image.data;
     var width = image.width;
@@ -731,12 +579,6 @@ function JPEGEncoder(quality) {
           g = imageData[p++];
           b = imageData[p++];
 
-          /* // calculate YUV values dynamically
-                      YDU[pos]=((( 0.29900)*r+( 0.58700)*g+( 0.11400)*b))-128; //-0x80
-                      UDU[pos]=(((-0.16874)*r+(-0.33126)*g+( 0.50000)*b));
-                      VDU[pos]=((( 0.50000)*r+(-0.41869)*g+(-0.08131)*b));
-                      */
-
           // use lookup table (slightly faster)
           YDU[pos] = ((RGB_YUV_TABLE[r] + RGB_YUV_TABLE[(g + 256) >> 0] + RGB_YUV_TABLE[(b + 512) >> 0]) >> 16) - 128;
           UDU[pos] =
@@ -758,21 +600,22 @@ function JPEGEncoder(quality) {
     ////////////////////////////////////////////////////////////////
 
     // Do the bit alignment of the EOI marker
-    if (bytepos >= 0) {
-      var fillbits = [];
-      fillbits[1] = bytepos + 1;
-      fillbits[0] = (1 << (bytepos + 1)) - 1;
+    const bwAny: any = bitWriter;
+    if (bwAny.bytepos >= 0) {
+      const fillbits = [] as any;
+      fillbits[1] = bwAny.bytepos + 1;
+      fillbits[0] = (1 << (bwAny.bytepos + 1)) - 1;
       writeBits(fillbits);
     }
 
     writeWord(0xffd9); //EOI
 
-    if (typeof module === 'undefined') return new Uint8Array(byteout);
-    return Buffer.from(byteout);
+    if (typeof module === 'undefined') return new Uint8Array(bitWriter.getData());
+    return Buffer.from(bitWriter.getData());
 
-    var jpegDataUri = 'data:image/jpeg;base64,' + btoa(byteout.join(''));
+    var jpegDataUri = 'data:image/jpeg;base64,' + btoa(bitWriter.getData().join(''));
 
-    byteout = [];
+    bitWriter.reset();
 
     // benchmarking
     var duration = new Date().getTime() - time_start;
@@ -915,9 +758,7 @@ function JPEGEncoder(quality) {
     setQuality(qu);
 
     // We need to re-initialize headers and tables based on the original image's metadata
-    byteout = new Array();
-    bytenew = 0;
-    bytepos = 7;
+    bitWriter.reset();
 
     // Header
     writeWord(0xffd8); // SOI
@@ -980,17 +821,18 @@ function JPEGEncoder(quality) {
     }
 
     // ----- Bit alignment before EOI -----
-    if (bytepos >= 0) {
-      var fillbits = [];
-      fillbits[1] = bytepos + 1;
-      fillbits[0] = (1 << (bytepos + 1)) - 1;
+    const bwAny: any = bitWriter;
+    if (bwAny.bytepos >= 0) {
+      const fillbits = [] as any;
+      fillbits[1] = bwAny.bytepos + 1;
+      fillbits[0] = (1 << (bwAny.bytepos + 1)) - 1;
       writeBits(fillbits);
     }
 
     writeWord(0xffd9); // EOI
 
-    var jpegData = new Uint8Array(byteout);
-    byteout = []; // clear for next encoding
+    var jpegData = bitWriter.getData();
+    bitWriter.reset();
 
     var duration = new Date().getTime() - time_start;
     // console.log('Encoding time: ' + duration + 'ms');
