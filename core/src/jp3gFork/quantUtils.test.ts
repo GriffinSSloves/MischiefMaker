@@ -12,14 +12,26 @@ describe('quantUtils - buildQuantTables', () => {
   });
 
   it('quantised values should be in range 1..255', () => {
-    for (const v of YTable) expect(v).toBeGreaterThanOrEqual(1);
-    for (const v of YTable) expect(v).toBeLessThanOrEqual(255);
-    for (const v of UVTable) expect(v).toBeGreaterThanOrEqual(1);
-    for (const v of UVTable) expect(v).toBeLessThanOrEqual(255);
+    for (const v of YTable) {
+      expect(v).toBeGreaterThanOrEqual(1);
+    }
+    for (const v of YTable) {
+      expect(v).toBeLessThanOrEqual(255);
+    }
+    for (const v of UVTable) {
+      expect(v).toBeGreaterThanOrEqual(1);
+    }
+    for (const v of UVTable) {
+      expect(v).toBeLessThanOrEqual(255);
+    }
   });
 
   it('fdtbl divisors should be positive', () => {
-    for (const v of fdtbl_Y) expect(v).toBeGreaterThan(0);
-    for (const v of fdtbl_UV) expect(v).toBeGreaterThan(0);
+    for (const v of fdtbl_Y) {
+      expect(v).toBeGreaterThan(0);
+    }
+    for (const v of fdtbl_UV) {
+      expect(v).toBeGreaterThan(0);
+    }
   });
 });

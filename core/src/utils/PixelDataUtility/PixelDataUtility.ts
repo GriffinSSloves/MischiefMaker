@@ -123,7 +123,9 @@ export function embedBits(
 
   for (let pixelIndex = startPixel; pixelIndex < pixelData.totalPixels && bitIndex < bits.length; pixelIndex++) {
     for (const channel of channelOrder) {
-      if (bitIndex >= bits.length) break;
+      if (bitIndex >= bits.length) {
+        break;
+      }
 
       const originalValue = channels[channel][pixelIndex];
       const newValue = setLSB(originalValue, bits[bitIndex]);
@@ -153,7 +155,9 @@ export function extractBits(
 
   for (let pixelIndex = startPixel; pixelIndex < pixelData.totalPixels && bits.length < bitCount; pixelIndex++) {
     for (const channel of channelOrder) {
-      if (bits.length >= bitCount) break;
+      if (bits.length >= bitCount) {
+        break;
+      }
 
       const value = channels[channel][pixelIndex];
       const bit = extractLSB(value);

@@ -19,7 +19,10 @@ describe('bitcodeUtils - buildCategoryAndBitcode', () => {
 
   it('bitcode entries should have matching length with category', () => {
     for (let val = -10; val <= 10; val++) {
-      if (val === 0) continue;
+      if (val === 0) {
+        continue;
+      }
+
       const index = 32767 + val;
       const entry = bitcode[index];
       expect(entry[1]).toBe(category[index]);

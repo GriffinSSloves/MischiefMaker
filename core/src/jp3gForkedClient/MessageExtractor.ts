@@ -31,7 +31,9 @@ export function extractMessageFromDctBlocks(decoder: IJpegInternalDecoder, expec
     const rowData = yComponent.dctBlocks[row];
     for (let col = 0; col < rowData.length; col++) {
       const block: number[] = rowData[col];
-      if (!block || block.length !== 64) continue;
+      if (!block || block.length !== 64) {
+        continue;
+      }
 
       for (let coefIdx = 1; coefIdx < 64 && messageIndex < expectedLength; coefIdx++) {
         const coef = block[coefIdx];

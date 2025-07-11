@@ -55,7 +55,7 @@ import { computeHuffmanTable, HuffmanTable } from './huffmanUtils';
 import { buildCategoryAndBitcode } from './bitcodeUtils';
 import { buildRgbYuvLookupTable } from './colorTables';
 import { buildQuantTables } from './quantUtils';
-import { fDCTQuant as dctQuant } from './dctUtils';
+import { fDCTQuant } from './dctUtils';
 import { BitWriter, BitSpec } from './BitWriter';
 import {
   writeAPP0,
@@ -157,13 +157,12 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
     bitWriter.writeWord(value);
   }
 
-  // DCT & quantization core – delegate to shared util
-  const fDCTQuant = dctQuant;
-
   // Local header writer wrappers now delegate to shared utilities.
   const writeAPP0Wrapper = () => writeAPP0(bitWriter);
   const writeAPP1Wrapper = (buf?: Uint8Array | null) => {
-    if (buf) writeAPP1(bitWriter, buf);
+    if (buf) {
+      writeAPP1(bitWriter, buf);
+    }
   };
   const writeSOF0Wrapper = (w: number, h: number) => writeSOF0(bitWriter, w, h);
   const writeCOMWrapper = (c?: string[]) => writeCOM(bitWriter, c);
@@ -224,7 +223,9 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
       let nrzeroes = i - startpos;
       if (nrzeroes >= I16) {
         lng = nrzeroes >> 4;
-        for (let nrmarker = 1; nrmarker <= lng; ++nrmarker) writeBits(M16zeroes);
+        for (let nrmarker = 1; nrmarker <= lng; ++nrmarker) {
+          writeBits(M16zeroes);
+        }
         nrzeroes = nrzeroes & 0xf;
       }
       pos = 32767 + DU[i];
@@ -281,7 +282,9 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
       let nrzeroes = i - startpos;
       if (nrzeroes >= I16) {
         lng = nrzeroes >> 4;
-        for (let nrmarker = 1; nrmarker <= lng; ++nrmarker) writeBits(M16zeroes);
+        for (let nrmarker = 1; nrmarker <= lng; ++nrmarker) {
+          writeBits(M16zeroes);
+        }
         nrzeroes = nrzeroes & 0xf;
       }
       pos = 32767 + DU[i];
@@ -306,7 +309,9 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
   this.encode = (image: IRgbaImage, quality?: number) => {
     // image data object (timestamp removed – previously unused)
 
-    if (quality) setQuality(quality);
+    if (quality) {
+      setQuality(quality);
+    }
 
     // Initialize bit writer
     bitWriter.reset();
@@ -392,7 +397,9 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
 
     writeWord(0xffd9); //EOI
 
-    if (typeof module === 'undefined') return new Uint8Array(bitWriter.getData());
+    if (typeof module === 'undefined') {
+      return new Uint8Array(bitWriter.getData());
+    }
     return Buffer.from(bitWriter.getData());
   };
 
@@ -488,13 +495,21 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
     // jp3g encoder and prevents unnecessary hard-failures during basic
     // round-trip tests.
 
-    if (!metadata.hSampRatio) metadata.hSampRatio = 2;
-    if (!metadata.vSampRatio) metadata.vSampRatio = 2;
+    if (!metadata.hSampRatio) {
+      metadata.hSampRatio = 2;
+    }
+    if (!metadata.vSampRatio) {
+      metadata.vSampRatio = 2;
+    }
 
     // Ensure we always have three component arrays to avoid crashes in
     // downstream frequency analysis (fallback to luminance blocks if missing).
-    if (!coefficientArrays[1]) coefficientArrays[1] = coefficientArrays[0];
-    if (!coefficientArrays[2]) coefficientArrays[2] = coefficientArrays[0];
+    if (!coefficientArrays[1]) {
+      coefficientArrays[1] = coefficientArrays[0];
+    }
+    if (!coefficientArrays[2]) {
+      coefficientArrays[2] = coefficientArrays[0];
+    }
 
     // If chroma components use 4:2:0 subsampling (i.e., half width/height in
     // blocks), duplicate each block to create a simple 4:4:4 representation so
@@ -505,11 +520,15 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
       const xBlocks = coefficientArrays[0][0].length;
       const cy = comp.length;
       const cx = comp[0].length;
-      if (cy === yBlocks && cx === xBlocks) return comp; // already same size
+      if (cy === yBlocks && cx === xBlocks) {
+        return comp; // already same size
+      }
 
       const factorY = Math.round(yBlocks / cy);
       const factorX = Math.round(xBlocks / cx);
-      if (factorY < 1 || factorX < 1) return comp; // unexpected, skip
+      if (factorY < 1 || factorX < 1) {
+        return comp; // unexpected, skip
+      }
 
       const up: ComponentBlocks = Array.from({ length: yBlocks }, () => new Array(xBlocks) as ComponentBlocks[number]);
       for (let y = 0; y < yBlocks; y++) {
@@ -621,7 +640,9 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
       quality = 100;
     }
 
-    if (currentQuality == quality) return; // don't recalc if unchanged
+    if (currentQuality == quality) {
+      return; // don't recalc if unchanged
+    }
 
     let sf = 0;
     if (quality < 50) {
@@ -636,7 +657,9 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
   }
 
   function init() {
-    if (!quality) quality = 50;
+    if (!quality) {
+      quality = 50;
+    }
     // Create tables
     initCharLookupTable();
     initHuffmanTbl();
@@ -694,7 +717,9 @@ interface IDecoderLike {
 }
 
 function isDecoderLike(obj: unknown): obj is IDecoderLike {
-  if (typeof obj !== 'object' || obj === null) return false;
+  if (typeof obj !== 'object' || obj === null) {
+    return false;
+  }
   const dec = obj as Partial<IDecoderLike>;
   return Array.isArray(dec.components) && typeof dec.width === 'number' && typeof dec.height === 'number';
 }

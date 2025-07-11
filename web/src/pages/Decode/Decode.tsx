@@ -87,7 +87,7 @@ export default function Decode() {
   };
 
   const copyToClipboard = async () => {
-    if (!decodedMessage) return;
+    if (!decodedMessage) {return;}
 
     try {
       await navigator.clipboard.writeText(decodedMessage);
@@ -98,7 +98,7 @@ export default function Decode() {
   };
 
   const downloadMessage = () => {
-    if (!decodedMessage) return;
+    if (!decodedMessage) {return;}
 
     const blob = new Blob([decodedMessage], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);

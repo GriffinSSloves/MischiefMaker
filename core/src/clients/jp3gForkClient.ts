@@ -351,7 +351,9 @@ export class Jp3gForkClient {
         for (let blockCol = 0; blockCol < yComponent.dctBlocks[blockRow].length; blockCol++) {
           const dctBlock = yComponent.dctBlocks[blockRow][blockCol];
 
-          if (!dctBlock || dctBlock.length !== 64) continue;
+          if (!dctBlock || dctBlock.length !== 64) {
+            continue;
+          }
 
           // Modify AC coefficients (skip DC at index 0)
           for (let coefIndex = 1; coefIndex < 64 && messageIndex < messageBytes.length; coefIndex++) {

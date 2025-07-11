@@ -63,6 +63,8 @@ export const globalRulesConfig = {
     'no-console': 'warn',
     'prefer-const': 'error',
     'no-var': 'error',
+    // Enforce braces for all control statements (if/else/loops/try)
+    curly: ['error', 'all'],
   },
 };
 

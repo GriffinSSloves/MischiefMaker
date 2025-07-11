@@ -36,7 +36,10 @@ export function generateHuffmanNrcodesValues(ht: HuffmanTable): { nrcodes: numbe
 
   for (let symbol = 0; symbol < ht.length; symbol++) {
     const entry = ht[symbol];
-    if (!entry) continue;
+    if (!entry) {
+      continue;
+    }
+
     const len = entry[1];
     counts[len]++;
   }

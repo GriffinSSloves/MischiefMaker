@@ -27,20 +27,32 @@ export function buildQuantTables(sf: number): QuantTablesResult {
   const fdtbl_UV = new Array<number>(64);
 
   // Clamp scale factor to sane range
-  if (sf < 1) sf = 1;
-  if (sf > 5000) sf = 5000;
+  if (sf < 1) {
+    sf = 1;
+  }
+  if (sf > 5000) {
+    sf = 5000;
+  }
 
   for (let i = 0; i < 64; i++) {
     let t = Math.floor((Y_LUMA_QT_BASE[i] * sf + 50) / 100);
-    if (t < 1) t = 1;
-    if (t > 255) t = 255;
+    if (t < 1) {
+      t = 1;
+    }
+    if (t > 255) {
+      t = 255;
+    }
     YTable[ZIG_ZAG[i]] = t;
   }
 
   for (let j = 0; j < 64; j++) {
     let u = Math.floor((UV_CHROMA_QT_BASE[j] * sf + 50) / 100);
-    if (u < 1) u = 1;
-    if (u > 255) u = 255;
+    if (u < 1) {
+      u = 1;
+    }
+    if (u > 255) {
+      u = 255;
+    }
     UVTable[ZIG_ZAG[j]] = u;
   }
 

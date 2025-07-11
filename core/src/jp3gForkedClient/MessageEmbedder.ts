@@ -39,7 +39,9 @@ export function embedMessageInDctBlocks(decoder: IJpegInternalDecoder, message: 
     const rowData = yComponent.dctBlocks[row];
     for (let col = 0; col < totalCols; col++) {
       const block: number[] = rowData[col];
-      if (!block || block.length !== 64) continue;
+      if (!block || block.length !== 64) {
+        continue;
+      }
 
       // Modify AC coefficients (skip DC at index 0)
       for (let coefIdx = 1; coefIdx < 64 && messageIndex < message.length; coefIdx++) {

@@ -12,15 +12,25 @@
 - **Main package `src/index.ts`** - required as public API entry point for npm packages
 - **Benefits**: Clearer code, explicit dependencies, easier refactoring
 
+**Avoid unnecessary aliasing**
+
+- Do not rename imports unless it is _strictly_ required to resolve a name collision.
+
 ```typescript
 // ✅ Good - direct imports
 import { PixelData } from '../types/DataTypes';
 import { ISteganographyEngine } from '../interfaces/ISteganographyEngine';
+// ✅ Good – keeps original name
+import { fDCTQuant } from './dctUtils';
 
 // ❌ Avoid - internal index.ts redirections
 import { PixelData } from '../types';
 import { ISteganographyEngine } from '../interfaces';
+// ❌ Bad – unnecessary alias
+import { fDCTQuant as dctQuant } from './dctUtils';
 ```
+
+When a collision truly exists, use an alias **and** add a short inline comment explaining the reason.
 
 **Exception**: Main package `src/index.ts` files are required as public API entry points for npm packages.
 

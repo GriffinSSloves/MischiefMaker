@@ -7,15 +7,23 @@ import { buildHuffmanTable } from './huffmanBuilder';
 function isPrefixFree(table: (readonly [number, number])[]): boolean {
   const codes: string[] = [];
   for (const entry of table) {
-    if (!entry) continue;
+    if (!entry) {
+      continue;
+    }
+
     const [code, len] = entry;
     codes.push(code.toString(2).padStart(len, '0'));
   }
   // Check that no code is the prefix of another
   for (let i = 0; i < codes.length; i++) {
     for (let j = 0; j < codes.length; j++) {
-      if (i === j) continue;
-      if (codes[j].startsWith(codes[i])) return false;
+      if (i === j) {
+        continue;
+      }
+
+      if (codes[j].startsWith(codes[i])) {
+        return false;
+      }
     }
   }
   return true;

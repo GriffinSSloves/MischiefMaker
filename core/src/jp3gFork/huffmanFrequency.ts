@@ -61,7 +61,9 @@ export function getHuffmanFrequencies(quantizedComponents: QuantizedComponents):
           zeroRun = 0;
         }
       }
-      if (zeroRun > 0) Y_AC_freq[0x00]++;
+      if (zeroRun > 0) {
+        Y_AC_freq[0x00]++;
+      }
 
       // ---------- Cb / Cr (4:2:0 sampling assumption) ----------
       if (blockRow % 2 === 0 && blockCol % 2 === 0) {
@@ -75,8 +77,9 @@ export function getHuffmanFrequencies(quantizedComponents: QuantizedComponents):
         UV_DC_freq[category[32767 + dcDiffU]]++;
         zeroRun = 0;
         for (let i = 1; i < 64; i++) {
-          if (cbBlock[i] === 0) zeroRun++;
-          else {
+          if (cbBlock[i] === 0) {
+            zeroRun++;
+          } else {
             while (zeroRun >= 16) {
               UV_AC_freq[0xf0]++;
               zeroRun -= 16;
@@ -85,7 +88,9 @@ export function getHuffmanFrequencies(quantizedComponents: QuantizedComponents):
             zeroRun = 0;
           }
         }
-        if (zeroRun > 0) UV_AC_freq[0x00]++;
+        if (zeroRun > 0) {
+          UV_AC_freq[0x00]++;
+        }
 
         // Cr
         const crBlock = component2[cbRow][cbCol];
@@ -94,8 +99,9 @@ export function getHuffmanFrequencies(quantizedComponents: QuantizedComponents):
         UV_DC_freq[category[32767 + dcDiffV]]++;
         zeroRun = 0;
         for (let i = 1; i < 64; i++) {
-          if (crBlock[i] === 0) zeroRun++;
-          else {
+          if (crBlock[i] === 0) {
+            zeroRun++;
+          } else {
             while (zeroRun >= 16) {
               UV_AC_freq[0xf0]++;
               zeroRun -= 16;
@@ -104,7 +110,9 @@ export function getHuffmanFrequencies(quantizedComponents: QuantizedComponents):
             zeroRun = 0;
           }
         }
-        if (zeroRun > 0) UV_AC_freq[0x00]++;
+        if (zeroRun > 0) {
+          UV_AC_freq[0x00]++;
+        }
       }
     }
   }

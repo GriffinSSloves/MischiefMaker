@@ -29,7 +29,10 @@ export function writeAPP0(writer: BitWriter): void {
 }
 
 export function writeAPP1(writer: BitWriter, exifBuffer?: Uint8Array): void {
-  if (!exifBuffer) return;
+  if (!exifBuffer) {
+    return;
+  }
+
   writer.writeWord(0xffe1); // APP1 marker
 
   if (exifBuffer[0] === 0x45 && exifBuffer[1] === 0x78 && exifBuffer[2] === 0x69 && exifBuffer[3] === 0x66) {
@@ -42,16 +45,25 @@ export function writeAPP1(writer: BitWriter, exifBuffer?: Uint8Array): void {
     writer.writeByte(0x66);
     writer.writeByte(0);
   }
-  for (let i = 0; i < exifBuffer.length; i++) writer.writeByte(exifBuffer[i]);
+  for (let i = 0; i < exifBuffer.length; i++) {
+    writer.writeByte(exifBuffer[i]);
+  }
 }
 
 export function writeCOM(writer: BitWriter, comments?: string[]): void {
-  if (!comments || comments.length === 0) return;
+  if (!comments || comments.length === 0) {
+    return;
+  }
   for (const c of comments) {
-    if (typeof c !== 'string') continue;
+    if (typeof c !== 'string') {
+      continue;
+    }
+
     writer.writeWord(0xfffe);
     writer.writeWord(c.length + 2);
-    for (let i = 0; i < c.length; i++) writer.writeByte(c.charCodeAt(i));
+    for (let i = 0; i < c.length; i++) {
+      writer.writeByte(c.charCodeAt(i));
+    }
   }
 }
 
@@ -101,10 +113,14 @@ export function writeDQT(writer: BitWriter, YTable: number[], UVTable: number[])
   writer.writeWord(132); // segment length: 2×(1 + 64) = 130 + 2 length bytes
 
   writer.writeByte(0); // Pq=0 (8-bit), Tq=0 (luminance)
-  for (let i = 0; i < 64; i++) writer.writeByte(YTable[i]);
+  for (let i = 0; i < 64; i++) {
+    writer.writeByte(YTable[i]);
+  }
 
   writer.writeByte(1); // Pq=0, Tq=1 (chrominance)
-  for (let i = 0; i < 64; i++) writer.writeByte(UVTable[i]);
+  for (let i = 0; i < 64; i++) {
+    writer.writeByte(UVTable[i]);
+  }
 }
 
 /**
@@ -137,8 +153,12 @@ export function writeDHT(
   // Helper to emit a single (nrcodes/values) table
   const emitTable = (nrcodes: number[], values: number[], tableClass: number, tableId: number) => {
     writer.writeByte((tableClass << 4) | tableId);
-    for (let i = 0; i < 16; i++) writer.writeByte(nrcodes[i]);
-    for (const v of values) writer.writeByte(v);
+    for (let i = 0; i < 16; i++) {
+      writer.writeByte(nrcodes[i]);
+    }
+    for (const v of values) {
+      writer.writeByte(v);
+    }
   };
 
   emitTable(YDC.nrcodes, YDC.values, 0, 0); // Y DC
@@ -157,8 +177,12 @@ export function writeStandardDHT(writer: BitWriter): void {
 
   const writeTable = (nrcodes: readonly number[], values: readonly number[], tableClass: number, tableId: number) => {
     writer.writeByte((tableClass << 4) | tableId);
-    for (let i = 1; i <= 16; i++) writer.writeByte(nrcodes[i] as number);
-    for (const v of values) writer.writeByte(v as number);
+    for (let i = 1; i <= 16; i++) {
+      writer.writeByte(nrcodes[i] as number);
+    }
+    for (const v of values) {
+      writer.writeByte(v as number);
+    }
   };
 
   // Luminance DC (class 0, id 0)
