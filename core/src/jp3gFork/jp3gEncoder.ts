@@ -60,7 +60,7 @@ import { getHuffmanFrequencies } from './huffmanFrequency';
 import { buildRgbYuvLookupTable } from './colorTables';
 import { buildQuantTables } from './quantUtils';
 import { fDCTQuant as dctQuant } from './dctUtils';
-import { BitWriter } from './BitWriter';
+import { BitWriter, BitSpec } from './BitWriter';
 import {
   writeAPP0,
   writeAPP1,
@@ -72,13 +72,12 @@ import {
   writeStandardDHT as writeStandardDHTHeader,
 } from './jpegHeaderWriters';
 
-var btoa =
-  btoa ||
-  function (buf) {
-    return Buffer.from(buf).toString('base64');
-  };
+// Polyfill for `btoa` to support Node environments – typed for TS strict mode
+const btoaFn: (buf: Uint8Array | number[]) => string =
+  (typeof globalThis !== 'undefined' && (globalThis as any).btoa) ||
+  ((buf: Uint8Array | number[]) => Buffer.from(buf).toString('base64'));
 
-function JPEGEncoder(quality: number = 50) {
+function JPEGEncoder(this: any, quality: number = 50) {
   // -------------------------------------------------------------------------
   // Internal state (typed)
   // -------------------------------------------------------------------------
@@ -88,10 +87,10 @@ function JPEGEncoder(quality: number = 50) {
   let fdtbl_UV: number[] = new Array(64);
 
   // Huffman tables: index = symbol, value = [code, length]
-  let YDC_HT: HuffmanTable | undefined;
-  let UVDC_HT: HuffmanTable | undefined;
-  let YAC_HT: HuffmanTable | undefined;
-  let UVAC_HT: HuffmanTable | undefined;
+  let YDC_HT!: HuffmanTable;
+  let UVDC_HT!: HuffmanTable;
+  let YAC_HT!: HuffmanTable;
+  let UVAC_HT!: HuffmanTable;
 
   // Category / bitcode lookup (index = 32767 + signed value)
   let category: number[] = new Array(65535);
@@ -149,15 +148,15 @@ function JPEGEncoder(quality: number = 50) {
   }
 
   // IO functions
-  function writeBits(bs) {
+  function writeBits(bs: BitSpec): void {
     bitWriter.writeBits(bs);
   }
 
-  function writeByte(value) {
+  function writeByte(value: number): void {
     bitWriter.writeByte(value);
   }
 
-  function writeWord(value) {
+  function writeWord(value: number): void {
     bitWriter.writeWord(value);
   }
 
@@ -166,16 +165,23 @@ function JPEGEncoder(quality: number = 50) {
 
   // Local header writer wrappers now delegate to shared utilities.
   const writeAPP0Wrapper = () => writeAPP0(bitWriter);
-  const writeAPP1Wrapper = buf => writeAPP1(bitWriter, buf);
-  const writeSOF0Wrapper = (w, h) => writeSOF0(bitWriter, w, h);
-  const writeCOMWrapper = c => writeCOM(bitWriter, c);
+  const writeAPP1Wrapper = (buf?: Uint8Array | null) => {
+    if (buf) writeAPP1(bitWriter, buf);
+  };
+  const writeSOF0Wrapper = (w: number, h: number) => writeSOF0(bitWriter, w, h);
+  const writeCOMWrapper = (c?: string[]) => writeCOM(bitWriter, c);
   const writeSOSWrapper = () => writeSOS(bitWriter);
 
   const writeDQTWrapper = () => writeDQTHeader(bitWriter, YTable, UVTable);
   const writeDHTWrapper = () => writeDHTHeader(bitWriter, YDC_HT, YAC_HT, UVDC_HT, UVAC_HT);
   const writeStandardDHTWrapper = () => writeStandardDHTHeader(bitWriter);
 
-  function processDUFromCoefficients(dctCoefficients, DC, HTDC, HTAC) {
+  function processDUFromCoefficients(
+    dctCoefficients: number[],
+    DC: number,
+    HTDC: HuffmanTable,
+    HTAC: HuffmanTable
+  ): number {
     var EOB = HTAC[0x00];
     var M16 = -16;
     var pos;
@@ -232,7 +238,7 @@ function JPEGEncoder(quality: number = 50) {
     return DC;
   }
 
-  function processDU(CDU, fdtbl, DC, HTDC, HTAC) {
+  function processDU(CDU: number[], fdtbl: number[], DC: number, HTDC: HuffmanTable, HTAC: HuffmanTable): number {
     var EOB = HTAC[0x00];
     var M16zeroes = HTAC[0xf0];
     var pos;
@@ -292,7 +298,7 @@ function JPEGEncoder(quality: number = 50) {
     }
   }
 
-  this.encode = function (image, quality) {
+  this.encode = (image: IRgbaImage, quality?: number) => {
     // image data object
     var time_start = new Date().getTime();
 
@@ -375,11 +381,9 @@ function JPEGEncoder(quality: number = 50) {
     ////////////////////////////////////////////////////////////////
 
     // Do the bit alignment of the EOI marker
-    const bwAny: any = bitWriter;
-    if (bwAny.bytepos >= 0) {
-      const fillbits = [] as any;
-      fillbits[1] = bwAny.bytepos + 1;
-      fillbits[0] = (1 << (bwAny.bytepos + 1)) - 1;
+    const pendingBits = bitWriter.getPendingBitCount();
+    if (pendingBits >= 0) {
+      const fillbits: BitSpec = [(1 << (pendingBits + 1)) - 1, pendingBits + 1];
       writeBits(fillbits);
     }
 
@@ -388,7 +392,7 @@ function JPEGEncoder(quality: number = 50) {
     if (typeof module === 'undefined') return new Uint8Array(bitWriter.getData());
     return Buffer.from(bitWriter.getData());
 
-    var jpegDataUri = 'data:image/jpeg;base64,' + btoa(bitWriter.getData().join(''));
+    var jpegDataUri = 'data:image/jpeg;base64,' + btoaFn(bitWriter.getData());
 
     bitWriter.reset();
 
@@ -396,7 +400,11 @@ function JPEGEncoder(quality: number = 50) {
   };
 
   // FORK MODIFICATION: Encode from DCT coefficients for steganography
-  this.encodeFromDCT = function (dctInput, metadataInput, quality) {
+  this.encodeFromDCT = (
+    dctInput: QuantizedComponents | { components: any[] },
+    metadataInput?: Partial<IEncodeMetadata>,
+    quality?: number
+  ): Uint8Array => {
     // Normalize parameters so that the encoder works whether we receive raw
     // coefficient arrays or a full decoder-like object.
     // ------------------------------------------------------------------
@@ -409,11 +417,11 @@ function JPEGEncoder(quality: number = 50) {
 
     // Helper we will populate below – will become the final arrays we feed
     // into the legacy encoder (shape: [component][blockRow][blockCol][64]).
-    let coefficientArrays;
+    let coefficientArrays: QuantizedComponents;
 
     // The metadata object we ultimately use (may be the caller-supplied one or
     // a derived fallback).
-    let metadata = metadataInput || {};
+    let metadata: Partial<IEncodeMetadata & { components?: any[] }> = metadataInput || {};
 
     // If the first argument looks like a decoder (has .components) rather than
     // an array, convert it into the structure the legacy code expects.
@@ -591,11 +599,9 @@ function JPEGEncoder(quality: number = 50) {
     }
 
     // ----- Bit alignment before EOI -----
-    const bwAny: any = bitWriter;
-    if (bwAny.bytepos >= 0) {
-      const fillbits = [] as any;
-      fillbits[1] = bwAny.bytepos + 1;
-      fillbits[0] = (1 << (bwAny.bytepos + 1)) - 1;
+    const pendingBits2 = bitWriter.getPendingBitCount();
+    if (pendingBits2 >= 0) {
+      const fillbits: BitSpec = [(1 << (pendingBits2 + 1)) - 1, pendingBits2 + 1];
       writeBits(fillbits);
     }
 

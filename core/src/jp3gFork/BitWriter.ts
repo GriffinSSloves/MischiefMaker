@@ -59,4 +59,13 @@ export class BitWriter {
     this.bytenew = 0;
     this.bytepos = 7;
   }
+
+  /**
+   * Return the number of bits (0-7) that are still pending in the current
+   * output byte. A value of -1 indicates that no byte is currently being
+   * assembled (i.e. writer is byte-aligned).
+   */
+  getPendingBitCount(): number {
+    return this.bytepos;
+  }
 }
