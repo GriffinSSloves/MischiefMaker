@@ -39,7 +39,7 @@ export function extractDCTFromPreservedBlocks(decoder: IJpegInternalDecoder): ID
     const rowData = component.dctBlocks[row];
     for (let col = 0; col < rowData.length; col++) {
       const block = rowData[col];
-      if (Array.isArray(block) && block.length === 64) {
+      if (block && block.length === 64) {
         const dc = block[0];
         const ac = Array.from(block.slice(1));
         blocks.push({ dc, ac });
@@ -79,7 +79,7 @@ export function extractDCTFromInternalBlocks(decoder: IJpegInternalDecoder): IDC
     const rowData = component.blocks[row];
     for (let col = 0; col < rowData.length; col++) {
       const block = rowData[col];
-      if (Array.isArray(block) && block.length === 64) {
+      if (block && block.length === 64) {
         const dc = block[0];
         const ac = Array.from(block.slice(1));
         blocks.push({ dc, ac });
