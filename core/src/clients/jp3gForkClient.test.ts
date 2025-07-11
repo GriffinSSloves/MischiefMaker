@@ -1,8 +1,9 @@
-import { describe, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { readFileSync, writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { Jp3gForkClient } from './jp3gForkClient';
+import { Buffer } from 'buffer';
 
 describe('Jp3gForkClient', () => {
   const client = new Jp3gForkClient();
@@ -51,14 +52,22 @@ describe('Jp3gForkClient', () => {
       }
     }
 
-    // This test should pass if we can access any internal data
+    // New assertion: we must have decoded blocks > 0
+    expect(result.success).toBe(true);
+    expect(result.dctCoefficients?.totalBlocks ?? 0).toBeGreaterThan(0);
     console.log(result.success ? '✅ INTERNAL ACCESS TEST PASSED' : '❌ INTERNAL ACCESS TEST FAILED');
   });
 
   it('should debug internal structure', async () => {
     console.log('\n=== Debugging jp3g fork internal structure ===');
 
-    await client.debugInternalStructure(testImageBuffer);
+    // Expect the debug routine not to throw
+    await expect(client.debugInternalStructure(testImageBuffer)).resolves.not.toThrow();
+
+    // Additionally validate that the image can still be parsed afterwards
+    const parseCheck = await client.parseWithInternalAccess(testImageBuffer);
+    expect(parseCheck.success).toBe(true);
+    expect(parseCheck.dctCoefficients?.totalBlocks ?? 0).toBeGreaterThan(0);
 
     console.log('✅ DEBUG STRUCTURE TEST COMPLETED');
   });
@@ -70,18 +79,21 @@ describe('Jp3gForkClient', () => {
     const message = 'Hello JPEG!';
     const embedResult = await client.embedMessageAndReencode(testImageBuffer, message, 85);
 
-    console.log('Modification result:', {
-      success: embedResult.success,
-      error: embedResult.error,
-      coefficientsModified: embedResult.coefficientsModified,
-      blocks: embedResult.blocks,
-    });
+    // --- Assertions ---
+    expect(embedResult.success).toBe(true);
+    expect(embedResult.coefficientsModified ?? 0).toBeGreaterThan(0);
+    expect(embedResult.blocks ?? 0).toBeGreaterThan(0);
 
-    if (embedResult.success) {
-      console.log('✅ COEFFICIENT MODIFICATION TEST PASSED');
-    } else {
-      console.log('❌ COEFFICIENT MODIFICATION TEST FAILED');
+    if (!embedResult.modifiedJpeg) {
+      throw new Error('Modified JPEG is undefined after coefficient modification');
     }
+
+    // Ensure modified JPEG parses correctly
+    const parseModified = await client.parseWithInternalAccess(embedResult.modifiedJpeg);
+    expect(parseModified.success).toBe(true);
+    expect(parseModified.dctCoefficients?.totalBlocks ?? 0).toBeGreaterThan(0);
+
+    console.log('✅ COEFFICIENT MODIFICATION TEST PASSED');
   });
 
   it('should perform end-to-end steganography', async () => {
@@ -89,6 +101,12 @@ describe('Jp3gForkClient', () => {
 
     const message = 'Secret message in JPEG!';
     const embedResult = await client.embedMessageAndReencode(testImageBuffer, message, 85);
+
+    // Assertions for embedding phase
+    expect(embedResult.success).toBe(true);
+    expect(embedResult.modifiedJpeg).toBeDefined();
+    expect(embedResult.coefficientsModified ?? 0).toBeGreaterThan(0);
+    expect(embedResult.blocks ?? 0).toBeGreaterThan(0);
 
     console.log('Embed result:', {
       success: embedResult.success,
@@ -98,7 +116,18 @@ describe('Jp3gForkClient', () => {
       totalBlocks: embedResult.blocks,
     });
 
-    if (embedResult.success && embedResult.modifiedJpeg) {
+    if (embedResult.modifiedJpeg) {
+      // --- Additional structural assertions ---
+      const jpegBuf = Buffer.from(embedResult.modifiedJpeg);
+      // JPEG must start with SOI 0xFFD8 and end with EOI 0xFFD9
+      expect(jpegBuf[0]).toBe(0xff);
+      expect(jpegBuf[1]).toBe(0xd8);
+      expect(jpegBuf[jpegBuf.length - 2]).toBe(0xff);
+      expect(jpegBuf[jpegBuf.length - 1]).toBe(0xd9);
+
+      // Size sanity-check: must be > original - this re-encode usually bigger
+      expect(embedResult.modifiedJpeg.length).toBeGreaterThan(testImageBuffer.length * 0.8);
+
       console.log(`✅ End-to-end test completed successfully!`);
       console.log(`   Original JPEG: ${testImageBuffer.length} bytes`);
       console.log(`   Modified JPEG: ${embedResult.modifiedJpeg.length} bytes`);
@@ -122,6 +151,10 @@ describe('Jp3gForkClient', () => {
     const reparseResult = await client.parseWithInternalAccess(embedResult.modifiedJpeg as Uint8Array);
 
     if (reparseResult.success) {
+      expect(reparseResult.dctCoefficients?.totalBlocks ?? 0).toBeGreaterThan(0);
+      // Expected number of luminance blocks = (width/8)*(height/8)
+      const expectedBlocks = (reparseResult.internalDecoder.width / 8) * (reparseResult.internalDecoder.height / 8);
+      expect(reparseResult.dctCoefficients?.totalBlocks).toBe(expectedBlocks);
       console.log(`✅ Modified JPEG can be parsed: ${reparseResult.success}`);
       console.log(`   DCT coefficients accessible: ${reparseResult.dctCoefficients ? 'Yes' : 'No'}`);
       console.log(`   Blocks in modified JPEG: ${reparseResult.dctCoefficients?.totalBlocks || 0}`);
@@ -137,6 +170,11 @@ describe('Jp3gForkClient', () => {
     console.log(`Test message: "${testMessage}" (${testMessage.length} bytes)`);
 
     const roundTripResult = await client.testRoundTripSteganography(testImageBuffer, testMessage, 85);
+
+    // Assertions for round-trip
+    expect(roundTripResult.success).toBe(true);
+    expect(roundTripResult.messagesMatch).toBe(true);
+    expect(roundTripResult.modifiedJpeg).toBeDefined();
 
     console.log('Round-trip result:', {
       success: roundTripResult.success,
@@ -185,6 +223,10 @@ describe('Jp3gForkClient', () => {
     // Test our fork
     const forkResult = await client.parseWithInternalAccess(testImageBuffer);
 
+    // Assertions on fork parse
+    expect(forkResult.success).toBe(true);
+    expect(forkResult.dctCoefficients?.totalBlocks ?? 0).toBeGreaterThan(0);
+
     console.log('Fork Results:');
     console.log('  Success:', forkResult.success);
     console.log('  Has DCT coefficients:', !!forkResult.dctCoefficients);
@@ -227,9 +269,11 @@ describe('Jp3gForkClient', () => {
     // Parse original JPEG
     const parseResult = await client.parseWithInternalAccess(testImageBuffer);
 
-    if (!parseResult.success || !parseResult.internalDecoder) {
-      console.log('❌ Failed to parse original JPEG');
-      return;
+    expect(parseResult.success).toBe(true);
+    expect(parseResult.internalDecoder).toBeDefined();
+
+    if (!parseResult.internalDecoder) {
+      throw new Error('Internal decoder is undefined');
     }
 
     const decoder = parseResult.internalDecoder;
@@ -254,6 +298,9 @@ describe('Jp3gForkClient', () => {
     const reEncodedJpeg = encoder.encodeFromDCT(dctData, decoder, 85);
 
     if (reEncodedJpeg) {
+      // Basic assertion that some bytes were produced
+      expect(reEncodedJpeg.byteLength).toBeGreaterThan(0);
+
       console.log(`✅ Re-encoded JPEG (no mods): ${reEncodedJpeg.length} bytes`);
       console.log(`Original: ${testImageBuffer.length} bytes, Re-encoded: ${reEncodedJpeg.length} bytes`);
 
@@ -270,17 +317,19 @@ describe('Jp3gForkClient', () => {
       console.log('Testing if re-encoded JPEG can be parsed...');
       const reParseResult = await client.parseWithInternalAccess(new Uint8Array(reEncodedJpeg));
 
-      if (reParseResult.success) {
-        console.log('🎉 SUCCESS: Re-encoded JPEG can be parsed!');
-        console.log(`Re-parsed: ${reParseResult.internalDecoder?.width}x${reParseResult.internalDecoder?.height}`);
-        console.log(`Components: ${reParseResult.internalDecoder?.components.length}`);
-        console.log(`DCT blocks: ${reParseResult.dctCoefficients?.totalBlocks}`);
-      } else {
-        console.log('❌ FAILED: Re-encoded JPEG cannot be parsed');
-        console.log('Error:', reParseResult.error);
-      }
+      expect(reParseResult.success).toBe(true);
+      expect(reParseResult.dctCoefficients?.totalBlocks ?? 0).toBeGreaterThan(0);
+      const expectedBlocks2 = (reParseResult.internalDecoder.width / 8) * (reParseResult.internalDecoder.height / 8);
+      expect(reParseResult.dctCoefficients?.totalBlocks).toBe(expectedBlocks2);
+
+      console.log('🎉 SUCCESS: Re-encoded JPEG can be parsed!');
+      console.log(`Re-parsed: ${reParseResult.internalDecoder?.width}x${reParseResult.internalDecoder?.height}`);
+      console.log(`Components: ${reParseResult.internalDecoder?.components.length}`);
+      console.log(`DCT blocks: ${reParseResult.dctCoefficients?.totalBlocks}`);
     } else {
       console.log('❌ ENCODING FAILED');
+      // Explicitly fail the test
+      expect(reEncodedJpeg).toBeDefined();
     }
   });
 });
