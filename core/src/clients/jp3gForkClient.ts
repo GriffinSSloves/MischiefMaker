@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 import jp3gFork, { JpegImage } from '../jp3gFork/jp3gDecoder';
 import { JPEGEncoder } from '../jp3gFork/jp3gEncoder';
+import { extractDCTFromPreservedBlocks, extractDCTFromInternalBlocks } from '../jp3gForkedClient/DCTExtractor';
+import { embedMessageInDctBlocks } from '../jp3gForkedClient/MessageEmbedder';
+import { extractMessageFromDctBlocks } from '../jp3gForkedClient/MessageExtractor';
+import { IJpegInternalDecoder } from '../jp3gForkedClient/IJpegDecoder';
 
 export interface IJp3gForkParseResult {
   success: boolean;
@@ -71,7 +75,7 @@ export class Jp3gForkClient {
           });
 
           // Try to extract DCT coefficients from the preserved blocks
-          const dctCoefficients = this.extractDCTFromPreservedBlocks(internalDecoder);
+          const dctCoefficients = extractDCTFromPreservedBlocks(internalDecoder);
 
           return {
             success: true,
@@ -91,7 +95,7 @@ export class Jp3gForkClient {
           });
 
           // Try to extract DCT coefficients from the blocks
-          const dctCoefficients = this.extractDCTFromInternalBlocks(internalDecoder);
+          const dctCoefficients = extractDCTFromInternalBlocks(internalDecoder);
 
           return {
             success: true,
@@ -119,108 +123,6 @@ export class Jp3gForkClient {
   }
 
   /**
-   * Extract DCT coefficients from jp3g's preserved block structure (FORK MODIFICATION)
-   */
-  private extractDCTFromPreservedBlocks(decoder: any): any {
-    console.log('Extracting DCT coefficients from preserved blocks...');
-
-    const blocks: Array<{ dc: number; ac: number[] }> = [];
-
-    // jp3g fork stores the preserved DCT blocks in dctBlocks
-    if (!decoder.components || decoder.components.length === 0) {
-      console.log('No components found');
-      return { blocks, width: 0, height: 0, totalBlocks: 0 };
-    }
-
-    // For now, focus on the first component (usually luminance)
-    const component = decoder.components[0];
-
-    if (!component.dctBlocks) {
-      console.log('No preserved dctBlocks found in component');
-      return { blocks, width: 0, height: 0, totalBlocks: 0 };
-    }
-
-    console.log(`Processing ${component.dctBlocks.length} DCT block rows`);
-
-    // Extract coefficients from each 8x8 block
-    for (let blockRow = 0; blockRow < component.dctBlocks.length; blockRow++) {
-      const blockRowData = component.dctBlocks[blockRow];
-
-      for (let blockCol = 0; blockCol < blockRowData.length; blockCol++) {
-        const block = blockRowData[blockCol];
-
-        if (block && block.length === 64) {
-          // This is an 8x8 DCT block with 64 coefficients
-          const dc = block[0]; // DC coefficient
-          const ac = Array.from(block.slice(1)) as number[]; // 63 AC coefficients
-
-          blocks.push({ dc, ac });
-        }
-      }
-    }
-
-    console.log(`✅ Extracted ${blocks.length} DCT blocks from preserved data successfully!`);
-
-    return {
-      blocks,
-      width: decoder.width || 0,
-      height: decoder.height || 0,
-      totalBlocks: blocks.length,
-    };
-  }
-
-  /**
-   * Extract DCT coefficients from jp3g's internal block structure
-   */
-  private extractDCTFromInternalBlocks(decoder: any): any {
-    console.log('Extracting DCT coefficients from internal blocks...');
-
-    const blocks: Array<{ dc: number; ac: number[] }> = [];
-
-    // jp3g stores the image components with block data
-    if (!decoder.components || decoder.components.length === 0) {
-      console.log('No components found');
-      return { blocks, width: 0, height: 0, totalBlocks: 0 };
-    }
-
-    // For now, focus on the first component (usually luminance)
-    const component = decoder.components[0];
-
-    if (!component.blocks) {
-      console.log('No blocks found in component');
-      return { blocks, width: 0, height: 0, totalBlocks: 0 };
-    }
-
-    console.log(`Processing ${component.blocks.length} block rows`);
-
-    // Extract coefficients from each 8x8 block
-    for (let blockRow = 0; blockRow < component.blocks.length; blockRow++) {
-      const blockRowData = component.blocks[blockRow];
-
-      for (let blockCol = 0; blockCol < blockRowData.length; blockCol++) {
-        const block = blockRowData[blockCol];
-
-        if (block && block.length === 64) {
-          // This is an 8x8 DCT block with 64 coefficients
-          const dc = block[0]; // DC coefficient
-          const ac = Array.from(block.slice(1)) as number[]; // 63 AC coefficients
-
-          blocks.push({ dc, ac });
-        }
-      }
-    }
-
-    console.log(`✅ Extracted ${blocks.length} DCT blocks successfully!`);
-
-    return {
-      blocks,
-      width: decoder.width || 0,
-      height: decoder.height || 0,
-      totalBlocks: blocks.length,
-    };
-  }
-
-  /**
    * Complete end-to-end steganography: embed message and re-encode JPEG
    */
   async embedMessageAndReencode(imageBuffer: Uint8Array, message: string, quality = 85): Promise<IJp3gForkEmbedResult> {
@@ -240,63 +142,12 @@ export class Jp3gForkClient {
       const decoder = parseResult.internalDecoder;
       console.log(`Original JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
 
-      // Step 2: Embed message in DCT coefficients
+      // Step 2: Embed message
       const messageBytes = new TextEncoder().encode(message);
-      let coefficientsModified = 0;
-      let messageIndex = 0;
-      let bitIndex = 0;
-
-      // Process only the luminance component (Y) for simplicity
-      const yComponent = decoder.components[0];
-      if (!yComponent.dctBlocks) {
-        return {
-          success: false,
-          error: 'No DCT blocks found in luminance component',
-        };
-      }
-
-      console.log(`Embedding in ${yComponent.dctBlocks.length} × ${yComponent.dctBlocks[0].length} DCT blocks`);
-
-      // Embed message bits in AC coefficients
-      outerLoop: for (let blockRow = 0; blockRow < yComponent.dctBlocks.length; blockRow++) {
-        for (let blockCol = 0; blockCol < yComponent.dctBlocks[blockRow].length; blockCol++) {
-          const dctBlock = yComponent.dctBlocks[blockRow][blockCol];
-
-          if (!dctBlock || dctBlock.length !== 64) continue;
-
-          // Modify AC coefficients (skip DC at index 0)
-          for (let coefIndex = 1; coefIndex < 64 && messageIndex < messageBytes.length; coefIndex++) {
-            const coef = dctBlock[coefIndex];
-
-            // Only modify non-zero coefficients with sufficient magnitude
-            if (coef !== 0 && Math.abs(coef) >= 2) {
-              // Extract bit from message
-              const messageBit = (messageBytes[messageIndex] >> (7 - bitIndex)) & 1;
-
-              // Modify LSB
-              if (coef > 0) {
-                dctBlock[coefIndex] = (coef & ~1) | messageBit;
-              } else {
-                dctBlock[coefIndex] = -((Math.abs(coef) & ~1) | messageBit);
-              }
-
-              coefficientsModified++;
-              bitIndex++;
-
-              if (bitIndex >= 8) {
-                bitIndex = 0;
-                messageIndex++;
-                if (messageIndex >= messageBytes.length) {
-                  break outerLoop;
-                }
-              }
-            }
-          }
-        }
-      }
+      const embedStats = embedMessageInDctBlocks(decoder as IJpegInternalDecoder, messageBytes);
 
       console.log(
-        `✅ Embedded ${messageIndex} bytes (${messageIndex * 8} bits) in ${coefficientsModified} coefficients`
+        `✅ Embedded ${embedStats.bytesEmbedded} bytes (${embedStats.bytesEmbedded * 8} bits) in ${embedStats.coefficientsModified} coefficients`
       );
 
       // Step 3: Re-encode the JPEG with modified coefficients
@@ -312,8 +163,8 @@ export class Jp3gForkClient {
       return {
         success: true,
         modifiedJpeg: new Uint8Array(modifiedJpeg),
-        coefficientsModified,
-        blocks: yComponent.dctBlocks.length * yComponent.dctBlocks[0].length,
+        coefficientsModified: embedStats.coefficientsModified,
+        blocks: embedStats.blocksVisited,
       };
     } catch (error) {
       console.error('End-to-end steganography failed:', error);
@@ -353,74 +204,20 @@ export class Jp3gForkClient {
       const decoder = parseResult.internalDecoder;
       console.log(`Extracting from JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
 
-      // Step 2: Extract message bits from DCT coefficients
-      const extractedBytes = new Uint8Array(expectedMessageLength);
-      let coefficientsRead = 0;
-      let messageIndex = 0;
-      let bitIndex = 0;
-      let currentByte = 0;
-
-      // Process only the luminance component (Y) - same as embedding
-      const yComponent = decoder.components[0];
-      if (!yComponent.dctBlocks) {
-        return {
-          success: false,
-          error: 'No DCT blocks found in luminance component',
-        };
-      }
-
-      console.log(`Extracting from ${yComponent.dctBlocks.length} × ${yComponent.dctBlocks[0].length} DCT blocks`);
-
-      // Extract message bits from AC coefficients in the same order as embedding
-      outerLoop: for (let blockRow = 0; blockRow < yComponent.dctBlocks.length; blockRow++) {
-        for (let blockCol = 0; blockCol < yComponent.dctBlocks[blockRow].length; blockCol++) {
-          const dctBlock = yComponent.dctBlocks[blockRow][blockCol];
-
-          if (!dctBlock || dctBlock.length !== 64) continue;
-
-          // Extract from AC coefficients (skip DC at index 0) in same order as embedding
-          for (let coefIndex = 1; coefIndex < 64 && messageIndex < expectedMessageLength; coefIndex++) {
-            const coef = dctBlock[coefIndex];
-
-            // Only read from non-zero coefficients with sufficient magnitude (same criteria as embedding)
-            if (coef !== 0 && Math.abs(coef) >= 2) {
-              // Extract LSB as message bit
-              const messageBit = coef & 1;
-
-              // Build the current byte
-              currentByte |= messageBit << (7 - bitIndex);
-
-              coefficientsRead++;
-              bitIndex++;
-
-              if (bitIndex >= 8) {
-                // Completed a byte
-                extractedBytes[messageIndex] = currentByte;
-                messageIndex++;
-                bitIndex = 0;
-                currentByte = 0;
-
-                if (messageIndex >= expectedMessageLength) {
-                  break outerLoop;
-                }
-              }
-            }
-          }
-        }
-      }
+      // Step 2: Extract message using helper
+      const extractResult = extractMessageFromDctBlocks(decoder as IJpegInternalDecoder, expectedMessageLength);
 
       console.log(
-        `✅ Extracted ${messageIndex} bytes (${messageIndex * 8} bits) from ${coefficientsRead} coefficients`
+        `✅ Extracted ${extractResult.bytes.length} bytes (${extractResult.bitsExtracted} bits) from ${extractResult.coefficientsRead} coefficients`
       );
 
-      // Step 3: Convert bytes back to string
-      const extractedMessage = new TextDecoder().decode(extractedBytes.slice(0, messageIndex));
+      const extractedMessage = new TextDecoder().decode(extractResult.bytes);
 
       return {
         success: true,
         message: extractedMessage,
-        bitsExtracted: messageIndex * 8,
-        coefficientsRead,
+        bitsExtracted: extractResult.bitsExtracted,
+        coefficientsRead: extractResult.coefficientsRead,
       };
     } catch (error) {
       console.error('Message extraction failed:', error);
