@@ -44,6 +44,24 @@ import { idctBlock } from './utils/idct';
 import { clampTo8bit } from './utils/math';
 import { buildComponentData as buildComponentDataUtil } from './utils/componentDataBuilder';
 import { createHuffmanDecoders } from './utils/huffmanDecoders';
+import {
+  parseAPP0,
+  parseAPP1,
+  parseAPP14,
+  parseDQT,
+  parseDHT,
+  parseSOF,
+  parseDRI,
+  parseDNL,
+  parseSOSHeader,
+  parseComment,
+  readUint16,
+  readDataBlock,
+  type MarkerParseContext,
+  type JfifData,
+  type AdobeData,
+  type Frame,
+} from './utils/markerParsers';
 
 const JpegImage = (function jpegImage() {
   'use strict';
@@ -267,17 +285,18 @@ const JpegImage = (function jpegImage() {
       const maxResolutionInPixels = this.opts.maxResolutionInMP * 1000 * 1000;
       let offset = 0,
         length = data.length;
-      function readUint16() {
-        const value = (data[offset] << 8) | data[offset + 1];
-        offset += 2;
-        return value;
-      }
-      function readDataBlock() {
-        const length = readUint16();
-        const array = data.subarray(offset, offset + length - 2);
-        offset += array.length;
-        return array;
-      }
+
+      // Create context for marker parsing
+      const ctx: MarkerParseContext = {
+        data,
+        offset,
+        maxResolutionInPixels,
+      };
+
+      // Helper to update local offset from context
+      const updateOffset = () => {
+        offset = ctx.offset;
+      };
       function prepareComponents(frame) {
         // According to the JPEG standard, the sampling factor must be between 1 and 4
         // See https://github.com/libjpeg-turbo/libjpeg-turbo/blob/9abeff46d87bd201a952e276f3e4339556a403a3/libjpeg.txt#L1138-L1146
@@ -327,14 +346,16 @@ const JpegImage = (function jpegImage() {
         frame.mcusPerLine = mcusPerLine;
         frame.mcusPerColumn = mcusPerColumn;
       }
-      let jfif = null;
-      let adobe = null;
-      let frame, resetInterval;
+      let jfif: JfifData | null = null;
+      let adobe: AdobeData | null = null;
+      let frame: Frame, resetInterval;
       const quantizationTables = [],
         frames = [];
       const huffmanTablesAC = [],
         huffmanTablesDC = [];
-      let fileMarker = readUint16();
+      ctx.offset = offset;
+      let fileMarker = readUint16(ctx);
+      updateOffset();
       let malformedDataOffset = -1;
       this.comments = [];
       if (fileMarker != 0xffd8) {
@@ -342,7 +363,9 @@ const JpegImage = (function jpegImage() {
         throw new Error('SOI not found');
       }
 
-      fileMarker = readUint16();
+      ctx.offset = offset;
+      fileMarker = readUint16(ctx);
+      updateOffset();
       while (fileMarker != 0xffd9) {
         // EOI (End of image)
         var i, j;
@@ -366,182 +389,111 @@ const JpegImage = (function jpegImage() {
           case 0xffee: // APP14
           case 0xffef: // APP15
           case 0xfffe: // COM (Comment)
-            var appData = readDataBlock();
+            ctx.offset = offset;
+            var appData = readDataBlock(ctx);
+            updateOffset();
 
             if (fileMarker === 0xfffe) {
-              const comment = String.fromCharCode.apply(null, appData);
+              const comment = parseComment(appData);
               this.comments.push(comment);
             }
 
             if (fileMarker === 0xffe0) {
-              if (
-                appData[0] === 0x4a &&
-                appData[1] === 0x46 &&
-                appData[2] === 0x49 &&
-                appData[3] === 0x46 &&
-                appData[4] === 0
-              ) {
-                // 'JFIF\x00'
-                jfif = {
-                  version: { major: appData[5], minor: appData[6] },
-                  densityUnits: appData[7],
-                  xDensity: (appData[8] << 8) | appData[9],
-                  yDensity: (appData[10] << 8) | appData[11],
-                  thumbWidth: appData[12],
-                  thumbHeight: appData[13],
-                  thumbData: appData.subarray(14, 14 + 3 * appData[12] * appData[13]),
-                };
+              const jfifData = parseAPP0(appData);
+              if (jfifData) {
+                jfif = jfifData;
               }
             }
-            // TODO APP1 - Exif
+
             if (fileMarker === 0xffe1) {
-              if (
-                appData[0] === 0x45 &&
-                appData[1] === 0x78 &&
-                appData[2] === 0x69 &&
-                appData[3] === 0x66 &&
-                appData[4] === 0
-              ) {
-                // 'EXIF\x00'
-                this.exifBuffer = appData.subarray(5, appData.length);
+              const exifData = parseAPP1(appData);
+              if (exifData) {
+                this.exifBuffer = exifData;
               }
             }
 
             if (fileMarker === 0xffee) {
-              if (
-                appData[0] === 0x41 &&
-                appData[1] === 0x64 &&
-                appData[2] === 0x6f &&
-                appData[3] === 0x62 &&
-                appData[4] === 0x65 &&
-                appData[5] === 0
-              ) {
-                // 'Adobe\x00'
-                adobe = {
-                  version: appData[6],
-                  flags0: (appData[7] << 8) | appData[8],
-                  flags1: (appData[9] << 8) | appData[10],
-                  transformCode: appData[11],
-                };
+              const adobeData = parseAPP14(appData);
+              if (adobeData) {
+                adobe = adobeData;
               }
             }
             break;
 
           case 0xffdb: // DQT (Define Quantization Tables)
-            var quantizationTablesLength = readUint16();
-            var quantizationTablesEnd = quantizationTablesLength + offset - 2;
-            while (offset < quantizationTablesEnd) {
-              const quantizationTableSpec = data[offset++];
-              requestMemoryAllocation(64 * 4);
-              const tableData = new Int32Array(64);
-              if (quantizationTableSpec >> 4 === 0) {
-                // 8 bit values
-                for (j = 0; j < 64; j++) {
-                  var z = dctZigZag[j];
-                  tableData[z] = data[offset++];
-                }
-              } else if (quantizationTableSpec >> 4 === 1) {
-                //16 bit
-                for (j = 0; j < 64; j++) {
-                  var z = dctZigZag[j];
-                  tableData[z] = readUint16();
-                }
-              } else {
-                throw new Error('DQT: invalid table spec');
+            ctx.offset = offset;
+            const dqtResult = parseDQT(ctx);
+            updateOffset();
+
+            // Merge the parsed tables into our quantizationTables array
+            for (let tableIndex = 0; tableIndex < dqtResult.data.length; tableIndex++) {
+              if (dqtResult.data[tableIndex]) {
+                quantizationTables[tableIndex] = dqtResult.data[tableIndex];
               }
-              quantizationTables[quantizationTableSpec & 15] = tableData;
             }
             break;
 
           case 0xffc0: // SOF0 (Start of Frame, Baseline DCT)
           case 0xffc1: // SOF1 (Start of Frame, Extended DCT)
           case 0xffc2: // SOF2 (Start of Frame, Progressive DCT)
-            readUint16(); // skip data length
-            frame = {};
-            frame.extended = fileMarker === 0xffc1;
-            frame.progressive = fileMarker === 0xffc2;
-            frame.precision = data[offset++];
-            frame.scanLines = readUint16();
-            frame.samplesPerLine = readUint16();
-            frame.components = {};
-            frame.componentsOrder = [];
-
-            var pixelsInFrame = frame.scanLines * frame.samplesPerLine;
-            if (pixelsInFrame > maxResolutionInPixels) {
-              const exceededAmount = Math.ceil((pixelsInFrame - maxResolutionInPixels) / 1e6);
-              throw new Error(`maxResolutionInMP limit exceeded by ${exceededAmount}MP`);
-            }
-
-            var componentsCount = data[offset++],
-              componentId;
-            for (i = 0; i < componentsCount; i++) {
-              componentId = data[offset];
-              const h = data[offset + 1] >> 4;
-              const v = data[offset + 1] & 15;
-              const qId = data[offset + 2];
-
-              if (h <= 0 || v <= 0) {
-                throw new Error('Invalid sampling factor, expected values above 0');
-              }
-
-              frame.componentsOrder.push(componentId);
-              frame.components[componentId] = {
-                h: h,
-                v: v,
-                quantizationIdx: qId,
-              };
-              offset += 3;
-            }
+            ctx.offset = offset;
+            const sofResult = parseSOF(ctx, fileMarker);
+            updateOffset();
+            frame = sofResult.data;
             prepareComponents(frame);
             frames.push(frame);
             break;
 
           case 0xffc4: // DHT (Define Huffman Tables)
-            var huffmanLength = readUint16();
-            for (i = 2; i < huffmanLength; ) {
-              const huffmanTableSpec = data[offset++];
-              const codeLengths = new Uint8Array(16);
-              let codeLengthSum = 0;
-              for (j = 0; j < 16; j++, offset++) {
-                codeLengthSum += codeLengths[j] = data[offset];
-              }
-              requestMemoryAllocation(16 + codeLengthSum);
-              const huffmanValues = new Uint8Array(codeLengthSum);
-              for (j = 0; j < codeLengthSum; j++, offset++) {
-                huffmanValues[j] = data[offset];
-              }
-              i += 17 + codeLengthSum;
+            ctx.offset = offset;
+            const dhtResult = parseDHT(ctx);
+            updateOffset();
 
-              (huffmanTableSpec >> 4 === 0 ? huffmanTablesDC : huffmanTablesAC)[huffmanTableSpec & 15] =
-                buildHuffmanTable(codeLengths, huffmanValues);
+            // Merge the parsed tables into our huffman arrays
+            for (let tableIndex = 0; tableIndex < dhtResult.data.huffmanTablesAC.length; tableIndex++) {
+              if (dhtResult.data.huffmanTablesAC[tableIndex]) {
+                huffmanTablesAC[tableIndex] = dhtResult.data.huffmanTablesAC[tableIndex];
+              }
+            }
+            for (let tableIndex = 0; tableIndex < dhtResult.data.huffmanTablesDC.length; tableIndex++) {
+              if (dhtResult.data.huffmanTablesDC[tableIndex]) {
+                huffmanTablesDC[tableIndex] = dhtResult.data.huffmanTablesDC[tableIndex];
+              }
             }
             break;
 
           case 0xffdd: // DRI (Define Restart Interval)
-            readUint16(); // skip data length
-            resetInterval = readUint16();
+            ctx.offset = offset;
+            const driResult = parseDRI(ctx);
+            updateOffset();
+            resetInterval = driResult.data;
             break;
 
           case 0xffdc: // Number of Lines marker
-            readUint16(); // skip data length
-            readUint16(); // Ignore this data since it represents the image height
+            ctx.offset = offset;
+            const dnlResult = parseDNL(ctx);
+            updateOffset();
+            // Ignore this data since it represents the image height
             break;
 
           case 0xffda: // SOS (Start of Scan)
-            var scanLength = readUint16();
-            var selectorsCount = data[offset++];
+            ctx.offset = offset;
+            const sosResult = parseSOSHeader(ctx);
+            updateOffset();
+
             var components = [],
               component;
+            const { selectorsCount, componentSelectors, spectralStart, spectralEnd, successiveApproximation } =
+              sosResult.data;
+
             for (i = 0; i < selectorsCount; i++) {
-              component = frame.components[data[offset++]];
-              const tableSpec = data[offset++];
+              const componentId = componentSelectors[i * 2];
+              const tableSpec = componentSelectors[i * 2 + 1];
+              component = frame.components[componentId];
               component.huffmanTableDC = huffmanTablesDC[tableSpec >> 4];
               component.huffmanTableAC = huffmanTablesAC[tableSpec & 15];
               components.push(component);
             }
-            var spectralStart = data[offset++];
-            var spectralEnd = data[offset++];
-            var successiveApproximation = data[offset++];
             var processed = decodeScan(
               data,
               offset,
@@ -578,7 +530,9 @@ const JpegImage = (function jpegImage() {
                 );
               }
               malformedDataOffset = offset - 1;
-              const nextOffset = readUint16();
+              ctx.offset = offset;
+              const nextOffset = readUint16(ctx);
+              updateOffset();
               if (data[offset + nextOffset - 2] === 0xff) {
                 offset += nextOffset - 2;
                 break;
@@ -586,7 +540,9 @@ const JpegImage = (function jpegImage() {
             }
             throw new Error('unknown JPEG marker ' + fileMarker.toString(16));
         }
-        fileMarker = readUint16();
+        ctx.offset = offset;
+        fileMarker = readUint16(ctx);
+        updateOffset();
       }
       if (frames.length != 1) {
         throw new Error('only single frame JPEGs supported');
