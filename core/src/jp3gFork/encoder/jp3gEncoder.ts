@@ -41,9 +41,9 @@ Basic GUI blocking jpeg encoder
 // ---------------------------------------------------------------------------
 
 import { Buffer } from 'buffer';
-import { buildCategoryAndBitcode } from '../bitcodeUtils';
-import { BitWriter, BitSpec } from '../BitWriter';
-import { buildRgbYuvLookupTable } from '../colorTables';
+import { buildCategoryAndBitcode } from './utils/bitcodeUtils';
+import { BitWriter, BitSpec } from './utils/BitWriter';
+import { buildRgbYuvLookupTable } from './utils/colorTables';
 import { ZIG_ZAG } from '../constants/constants';
 import {
   STD_DC_LUMINANCE_NRCODES,
@@ -55,9 +55,9 @@ import {
   STD_AC_CHROMINANCE_NRCODES,
   STD_AC_CHROMINANCE_VALUES,
 } from '../constants/huffmanConstants';
-import { fDCTQuant } from '../dctUtils';
-import { ComponentBlocks, QuantizedComponents } from '../huffmanFrequency';
-import { HuffmanTable, computeHuffmanTable } from '../huffmanUtils';
+import { fDCTQuant } from './utils/dctUtils';
+import { ComponentBlocks, QuantizedComponents } from './utils/huffmanFrequency';
+import { HuffmanTable, computeHuffmanTable } from './utils/huffmanUtils';
 import {
   writeAPP0,
   writeAPP1,
@@ -67,8 +67,8 @@ import {
   writeDHT,
   writeDQT,
   writeStandardDHT,
-} from '../jpegHeaderWriters';
-import { buildQuantTables } from '../quantUtils';
+} from './utils/jpegHeaderWriters';
+import { buildQuantTables } from './utils/quantUtils';
 import { IRgbaImage, IEncodeMetadata, IJpegEncoder } from '../types/types';
 
 // Helper interface describing a decoder component shape we care about

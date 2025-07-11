@@ -1,6 +1,6 @@
-import { IJpegInternalDecoder } from './IJpegDecoder';
-
 // DCT types live in DCTExtractor but are not needed directly here
+
+import { IJpegInternalDecoder } from '../../types/IJpegDecoder';
 
 export interface IEmbedStats {
   /** Number of AC coefficients whose LSB has been changed */

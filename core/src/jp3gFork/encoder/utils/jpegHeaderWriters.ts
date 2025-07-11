@@ -9,7 +9,7 @@ import {
   STD_DC_CHROMINANCE_VALUES,
   STD_AC_CHROMINANCE_NRCODES,
   STD_AC_CHROMINANCE_VALUES,
-} from './constants/huffmanConstants';
+} from '../../constants/huffmanConstants';
 
 export function writeAPP0(writer: BitWriter): void {
   writer.writeWord(0xffe0); // APP0 marker

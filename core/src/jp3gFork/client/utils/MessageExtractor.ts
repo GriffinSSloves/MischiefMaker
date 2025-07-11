@@ -1,4 +1,4 @@
-import { IJpegInternalDecoder } from './IJpegDecoder';
+import { IJpegInternalDecoder } from '../../types/IJpegDecoder';
 
 export interface IExtractResult {
   bytes: Uint8Array;

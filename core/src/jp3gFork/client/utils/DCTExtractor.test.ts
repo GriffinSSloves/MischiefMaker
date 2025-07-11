@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractDCTFromPreservedBlocks, extractDCTFromInternalBlocks, IDCTExtractionResult } from './DCTExtractor';
+import { IDCTExtractionResult, extractDCTFromPreservedBlocks, extractDCTFromInternalBlocks } from './DCTExtractor';
 
 // Helper to create a mock 8×8 block filled with incremental values for easy assertions.
 const createMockBlock = () => Array.from({ length: 64 }, (_, i) => i);

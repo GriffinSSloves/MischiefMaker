@@ -1,20 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, resolve } from 'url';
 import { Jp3gForkClient } from './jp3gForkClient';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const testDir = resolve(__dirname, '../../tests');
+
 describe('Jp3gForkClient E2E', () => {
   it('should perform a full round-trip steganography cycle', async () => {
     // 1. Setup
     const client = new Jp3gForkClient();
-    const imagePath = path.join(__dirname, '../../tests/images/FacebookPFP.jpg');
+    const imagePath = path.join(testDir, 'images/FacebookPFP.jpg');
     const imageBuffer = fs.readFileSync(imagePath);
     const message = 'This is a secret message for the E2E test!';
-    const outputDir = path.join(__dirname, '../../tests/output');
+    const outputDir = path.join(testDir, 'output');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }

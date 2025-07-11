@@ -10,7 +10,8 @@ describe('Jp3gForkClient', () => {
 
   // Get test image
   const __dirname = dirname(fileURLToPath(import.meta.url));
-  const testImagePath = resolve(__dirname, '../../tests/images/FacebookPFP.jpg');
+  const testDir = resolve(__dirname, '../../../tests');
+  const testImagePath = resolve(testDir, 'images/FacebookPFP.jpg');
   let testImageBuffer: Uint8Array;
 
   try {
@@ -136,7 +137,7 @@ describe('Jp3gForkClient', () => {
       console.log(`   Total blocks processed: ${embedResult.blocks}`);
 
       // Save the modified JPEG for visual inspection
-      const outputPath = resolve(__dirname, '../../tests/output/steganography_modified.jpg');
+      const outputPath = resolve(testDir, 'output/steganography_modified.jpg');
       try {
         writeFileSync(outputPath, embedResult.modifiedJpeg);
         console.log(`   ✅ Modified JPEG with embedded message saved to: ${outputPath}`);
@@ -202,7 +203,7 @@ describe('Jp3gForkClient', () => {
 
       // Save the modified JPEG for visual inspection
       if (roundTripResult.modifiedJpeg) {
-        const outputPath = resolve(__dirname, '../../tests/output/modified_with_steganography.jpg');
+        const outputPath = resolve(testDir, 'output/modified_with_steganography.jpg');
         try {
           writeFileSync(outputPath, roundTripResult.modifiedJpeg);
           console.log(`   Modified JPEG saved to: ${outputPath}`);
@@ -280,7 +281,7 @@ describe('Jp3gForkClient', () => {
     console.log(`Parsed JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
 
     // Try to re-encode WITHOUT any modifications
-    const { JPEGEncoder } = await import('../jp3gFork/encoder/jp3gEncoder');
+    const { JPEGEncoder } = await import('../encoder/jp3gEncoder');
     const encoder = new (JPEGEncoder as any)(85);
 
     // Prepare DCT data exactly as parsed (no modifications)
@@ -305,7 +306,7 @@ describe('Jp3gForkClient', () => {
       console.log(`Original: ${testImageBuffer.length} bytes, Re-encoded: ${reEncodedJpeg.length} bytes`);
 
       // Save the re-encoded JPEG for visual inspection
-      const outputPath = resolve(__dirname, '../../tests/output/re_encoded_unmodified.jpg');
+      const outputPath = resolve(testDir, 'output/re_encoded_unmodified.jpg');
       try {
         writeFileSync(outputPath, reEncodedJpeg);
         console.log(`   ✅ Re-encoded JPEG (unmodified) saved to: ${outputPath}`);

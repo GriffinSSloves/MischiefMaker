@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { extractMessageFromDctBlocks } from './MessageExtractor';
-import { IJpegInternalDecoder } from './IJpegDecoder';
+import { IJpegInternalDecoder } from '../../types/IJpegDecoder';
 
 const createBlockWithByte = (byte: number): number[] => {
   const block = new Array(64).fill(2); // safe magnitude ≥ 2

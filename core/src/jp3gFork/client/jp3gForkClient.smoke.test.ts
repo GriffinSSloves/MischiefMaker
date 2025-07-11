@@ -1,11 +1,12 @@
 import { describe, test, expect } from 'vitest';
 import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { Buffer } from 'buffer';
 import { Jp3gForkClient } from './jp3gForkClient';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const testDir = resolve(__dirname, '../../../tests');
 
 // Test images available in the test folder
 const testImages = ['FacebookPFP.jpg', 'IMG_3457.JPG', '402D9640-645A-470E-9DA2-07DE1D4E3D18_1_105_c.jpeg'];
@@ -20,7 +21,7 @@ describe('Jp3gForkClient Smoke Tests', () => {
       let imageBuffer: Uint8Array;
 
       test('should load image file', () => {
-        const imagePath = join(__dirname, '../../tests/images', imageName);
+        const imagePath = join(testDir, 'images', imageName);
         try {
           const buffer = readFileSync(imagePath);
           imageBuffer = new Uint8Array(buffer);
@@ -90,7 +91,7 @@ describe('Jp3gForkClient Smoke Tests', () => {
 // Helper function to run tests for a specific image
 export function testSingleImageJp3g(imageName: string) {
   const client = new Jp3gForkClient();
-  const imagePath = join(__dirname, '../../tests/images', imageName);
+  const imagePath = join(testDir, 'images', imageName);
 
   try {
     console.log(`\n=== Testing ${imageName} with jp3g ===`);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { embedMessageInDctBlocks } from './MessageEmbedder';
 import { extractMessageFromDctBlocks } from './MessageExtractor';
-import { IJpegInternalDecoder } from './IJpegDecoder';
+import { IJpegInternalDecoder } from '../../types/IJpegDecoder';
 
 const createEmptyBlock = () => {
   const arr = new Array(64).fill(2); // magnitude >= 2, all positive

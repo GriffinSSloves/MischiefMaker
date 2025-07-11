@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console */
-import jp3gFork, { JpegImage } from '../jp3gFork/jp3gDecoder';
-import { extractDCTFromPreservedBlocks, extractDCTFromInternalBlocks } from '../jp3gForkedClient/DCTExtractor';
-import { embedMessageInDctBlocks } from '../jp3gForkedClient/MessageEmbedder';
-import { extractMessageFromDctBlocks } from '../jp3gForkedClient/MessageExtractor';
-import { IJpegInternalDecoder } from '../jp3gForkedClient/IJpegDecoder';
-import { JPEGEncoder } from '../jp3gFork/encoder/jp3gEncoder';
+import jp3gFork, { JpegImage } from '../decoder/jp3gDecoder';
+import { IJpegInternalDecoder } from '../types/IJpegDecoder';
+import { JPEGEncoder } from '../encoder/jp3gEncoder';
+import { extractDCTFromPreservedBlocks, extractDCTFromInternalBlocks } from './utils/DCTExtractor';
+import { embedMessageInDctBlocks } from './utils/MessageEmbedder';
+import { extractMessageFromDctBlocks } from './utils/MessageExtractor';
 
 export interface IJp3gForkParseResult {
   success: boolean;
