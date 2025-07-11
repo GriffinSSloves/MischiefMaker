@@ -1,181 +1,3 @@
-# Files changed between working commit 3b41aa1 and failing commit f49d7012
-
-```
-core/src/clients/jp3gForkClient.ts
-core/src/jp3gFork/constants.ts
-core/src/jp3gFork/huffmanConstants.ts
-core/src/jp3gFork/jp3gEncoder.ts
-core/src/jp3gFork/quantTables.ts
-core/src/jp3gForkedClient/DCTExtractor.test.ts
-core/src/jp3gForkedClient/DCTExtractor.ts
-core/src/jp3gForkedClient/IJpegDecoder.ts
-core/src/jp3gForkedClient/MessageEmbedder.test.ts
-core/src/jp3gForkedClient/MessageEmbedder.ts
-core/src/jp3gForkedClient/MessageExtractor.test.ts
-core/src/jp3gForkedClient/MessageExtractor.ts
-core/src/jpegEncoder/BitWriter.test.ts
-core/src/jpegEncoder/BitWriter.ts
-core/src/jpegEncoder/Constants.ts
-core/src/jpegEncoder/Dct.test.ts
-core/src/jpegEncoder/Dct.ts
-core/src/jpegEncoder/HuffmanTables.test.ts
-core/src/jpegEncoder/HuffmanTables.ts
-core/src/jpegEncoder/QuantTables.test.ts
-core/src/jpegEncoder/QuantTables.ts
-```
-
-Successful run of jp3gForkClient.e2e.test.ts
-
-```
-=== END-TO-END STEGANOGRAPHY: EMBED & RE-ENCODE ===
-=== JP3G FORK CLIENT: Testing internal access ===
-Fork parsed JPEG successfully
-Available properties: [
-  'width',
-  'height',
-  'components',
-  'jfif',
-  'adobe',
-  'comments',
-  '_decoder'
-]
-Internal decoder available: true
-Decoder properties: [
-  'opts',
-  'comments',
-  'exifBuffer',
-  'width',
-  'height',
-  'jfif',
-  'adobe',
-  'components'
-]
-Components: 3
-First component properties: [
-  'lines',
-  'scaleX',
-  'scaleY',
-  'dctBlocks',
-  'blocksPerLine',
-  'blocksPerColumn',
-  'quantizationTable'
-]
-✅ SUCCESS: Found preserved DCT blocks in fork!
-DCT Blocks structure: {
-  rows: 120,
-  cols: 180,
-  blockType: 'object',
-  blockLength: 64,
-  blocksPerLine: 180,
-  blocksPerColumn: 120
-}
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
-Original JPEG: 1440x960, 3 components
-Embedding in 120 × 180 DCT blocks
-✅ Embedded 42 bytes (336 bits) in 336 coefficients
-Re-encoding JPEG with modified DCT coefficients...
-✅ Re-encoded JPEG: 324408 bytes
-✅ E2E: Message embedded and saved to /Users/griffinsloves/dev/MischiefMaker/core/tests/output/e2e_modified_2025-07-11T03-47-11.815Z.jpg
-=== JP3G FORK CLIENT: Testing internal access ===
-Fork parsed JPEG successfully
-Available properties: [
-  'width',
-  'height',
-  'components',
-  'jfif',
-  'adobe',
-  'comments',
-  '_decoder'
-]
-Internal decoder available: true
-Decoder properties: [
-  'opts',
-  'comments',
-  'exifBuffer',
-  'width',
-  'height',
-  'jfif',
-  'adobe',
-  'components'
-]
-Components: 3
-First component properties: [
-  'lines',
-  'scaleX',
-  'scaleY',
-  'dctBlocks',
-  'blocksPerLine',
-  'blocksPerColumn',
-  'quantizationTable'
-]
-✅ SUCCESS: Found preserved DCT blocks in fork!
-DCT Blocks structure: {
-  rows: 120,
-  cols: 180,
-  blockType: 'object',
-  blockLength: 64,
-  blocksPerLine: 180,
-  blocksPerColumn: 120
-}
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
-✅ E2E: Modified JPEG is valid and parsable
-=== EXTRACTING MESSAGE FROM STEGANOGRAPHY ===
-=== JP3G FORK CLIENT: Testing internal access ===
-Fork parsed JPEG successfully
-Available properties: [
-  'width',
-  'height',
-  'components',
-  'jfif',
-  'adobe',
-  'comments',
-  '_decoder'
-]
-Internal decoder available: true
-Decoder properties: [
-  'opts',
-  'comments',
-  'exifBuffer',
-  'width',
-  'height',
-  'jfif',
-  'adobe',
-  'components'
-]
-Components: 3
-First component properties: [
-  'lines',
-  'scaleX',
-  'scaleY',
-  'dctBlocks',
-  'blocksPerLine',
-  'blocksPerColumn',
-  'quantizationTable'
-]
-✅ SUCCESS: Found preserved DCT blocks in fork!
-DCT Blocks structure: {
-  rows: 120,
-  cols: 180,
-  blockType: 'object',
-  blockLength: 64,
-  blocksPerLine: 180,
-  blocksPerColumn: 120
-}
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
-Extracting from JPEG: 1440x960, 3 components
-Extracting from 120 × 180 DCT blocks
-✅ Extracted 42 bytes (336 bits) from 336 coefficients
-✅ E2E: Message extracted successfully: "This is a secret message for the E2E test!"
-```
-
-Successful run of jp3gForkClient.test.ts
-
 ```
 ✅ Test image loaded: 276642 bytes
 
@@ -221,9 +43,6 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 Parse result: {
   success: true,
   error: undefined,
@@ -308,6 +127,47 @@ height: number
 jfif: object
 adobe: object
 components: object [3]
+=== JP3G FORK CLIENT: Testing internal access ===
+Fork parsed JPEG successfully
+Available properties: [
+  'width',
+  'height',
+  'components',
+  'jfif',
+  'adobe',
+  'comments',
+  '_decoder'
+]
+Internal decoder available: true
+Decoder properties: [
+  'opts',
+  'comments',
+  'exifBuffer',
+  'width',
+  'height',
+  'jfif',
+  'adobe',
+  'components'
+]
+Components: 3
+First component properties: [
+  'lines',
+  'scaleX',
+  'scaleY',
+  'dctBlocks',
+  'blocksPerLine',
+  'blocksPerColumn',
+  'quantizationTable'
+]
+✅ SUCCESS: Found preserved DCT blocks in fork!
+DCT Blocks structure: {
+  rows: 120,
+  cols: 180,
+  blockType: 'object',
+  blockLength: 64,
+  blocksPerLine: 180,
+  blocksPerColumn: 120
+}
 ✅ DEBUG STRUCTURE TEST COMPLETED
 
 === Testing DCT coefficient modification ===
@@ -353,19 +213,50 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 Original JPEG: 1440x960, 3 components
-Embedding in 120 × 180 DCT blocks
 ✅ Embedded 11 bytes (88 bits) in 88 coefficients
 Re-encoding JPEG with modified DCT coefficients...
 ✅ Re-encoded JPEG: 324409 bytes
-Modification result: {
-  success: true,
-  error: undefined,
-  coefficientsModified: 88,
-  blocks: 21600
+=== JP3G FORK CLIENT: Testing internal access ===
+Fork parsed JPEG successfully
+Available properties: [
+  'width',
+  'height',
+  'components',
+  'jfif',
+  'adobe',
+  'comments',
+  '_decoder'
+]
+Internal decoder available: true
+Decoder properties: [
+  'opts',
+  'comments',
+  'exifBuffer',
+  'width',
+  'height',
+  'jfif',
+  'adobe',
+  'components'
+]
+Components: 3
+First component properties: [
+  'lines',
+  'scaleX',
+  'scaleY',
+  'dctBlocks',
+  'blocksPerLine',
+  'blocksPerColumn',
+  'quantizationTable'
+]
+✅ SUCCESS: Found preserved DCT blocks in fork!
+DCT Blocks structure: {
+  rows: 120,
+  cols: 180,
+  blockType: 'object',
+  blockLength: 64,
+  blocksPerLine: 180,
+  blocksPerColumn: 120
 }
 ✅ COEFFICIENT MODIFICATION TEST PASSED
 
@@ -412,11 +303,7 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 Original JPEG: 1440x960, 3 components
-Embedding in 120 × 180 DCT blocks
 ✅ Embedded 23 bytes (184 bits) in 184 coefficients
 Re-encoding JPEG with modified DCT coefficients...
 ✅ Re-encoded JPEG: 324409 bytes
@@ -475,9 +362,6 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 ✅ Modified JPEG can be parsed: true
    DCT coefficients accessible: Yes
    Blocks in modified JPEG: 21600
@@ -528,11 +412,7 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 Original JPEG: 1440x960, 3 components
-Embedding in 120 × 180 DCT blocks
 ✅ Embedded 28 bytes (224 bits) in 224 coefficients
 Re-encoding JPEG with modified DCT coefficients...
 ✅ Re-encoded JPEG: 324409 bytes
@@ -579,11 +459,7 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 Extracting from JPEG: 1440x960, 3 components
-Extracting from 120 × 180 DCT blocks
 ✅ Extracted 28 bytes (224 bits) from 224 coefficients
 Original message: "Hello world! This is a test."
 Extracted message: "Hello world! This is a test."
@@ -654,9 +530,6 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 Fork Results:
   Success: true
   Has DCT coefficients: true
@@ -722,9 +595,6 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 Parsed JPEG: 1440x960, 3 components
 ✅ Re-encoded JPEG (no mods): 324343 bytes
 Original: 276642 bytes, Re-encoded: 324343 bytes
@@ -770,11 +640,148 @@ DCT Blocks structure: {
   blocksPerLine: 180,
   blocksPerColumn: 120
 }
-Extracting DCT coefficients from preserved blocks...
-Processing 120 DCT block rows
-✅ Extracted 21600 DCT blocks from preserved data successfully!
 🎉 SUCCESS: Re-encoded JPEG can be parsed!
 Re-parsed: 1440x960
 Components: 3
 DCT blocks: 21600
+```
+
+e2e
+
+```
+=== END-TO-END STEGANOGRAPHY: EMBED & RE-ENCODE ===
+=== JP3G FORK CLIENT: Testing internal access ===
+Fork parsed JPEG successfully
+Available properties: [
+  'width',
+  'height',
+  'components',
+  'jfif',
+  'adobe',
+  'comments',
+  '_decoder'
+]
+Internal decoder available: true
+Decoder properties: [
+  'opts',
+  'comments',
+  'exifBuffer',
+  'width',
+  'height',
+  'jfif',
+  'adobe',
+  'components'
+]
+Components: 3
+First component properties: [
+  'lines',
+  'scaleX',
+  'scaleY',
+  'dctBlocks',
+  'blocksPerLine',
+  'blocksPerColumn',
+  'quantizationTable'
+]
+✅ SUCCESS: Found preserved DCT blocks in fork!
+DCT Blocks structure: {
+  rows: 120,
+  cols: 180,
+  blockType: 'object',
+  blockLength: 64,
+  blocksPerLine: 180,
+  blocksPerColumn: 120
+}
+Original JPEG: 1440x960, 3 components
+✅ Embedded 42 bytes (336 bits) in 336 coefficients
+Re-encoding JPEG with modified DCT coefficients...
+✅ Re-encoded JPEG: 324408 bytes
+✅ E2E: Message embedded and saved to /Users/griffinsloves/dev/MischiefMaker/core/tests/output/e2e_modified_2025-07-11T04-26-18.022Z.jpg
+=== JP3G FORK CLIENT: Testing internal access ===
+Fork parsed JPEG successfully
+Available properties: [
+  'width',
+  'height',
+  'components',
+  'jfif',
+  'adobe',
+  'comments',
+  '_decoder'
+]
+Internal decoder available: true
+Decoder properties: [
+  'opts',
+  'comments',
+  'exifBuffer',
+  'width',
+  'height',
+  'jfif',
+  'adobe',
+  'components'
+]
+Components: 3
+First component properties: [
+  'lines',
+  'scaleX',
+  'scaleY',
+  'dctBlocks',
+  'blocksPerLine',
+  'blocksPerColumn',
+  'quantizationTable'
+]
+✅ SUCCESS: Found preserved DCT blocks in fork!
+DCT Blocks structure: {
+  rows: 120,
+  cols: 180,
+  blockType: 'object',
+  blockLength: 64,
+  blocksPerLine: 180,
+  blocksPerColumn: 120
+}
+✅ E2E: Modified JPEG is valid and parsable
+=== EXTRACTING MESSAGE FROM STEGANOGRAPHY ===
+=== JP3G FORK CLIENT: Testing internal access ===
+Fork parsed JPEG successfully
+Available properties: [
+  'width',
+  'height',
+  'components',
+  'jfif',
+  'adobe',
+  'comments',
+  '_decoder'
+]
+Internal decoder available: true
+Decoder properties: [
+  'opts',
+  'comments',
+  'exifBuffer',
+  'width',
+  'height',
+  'jfif',
+  'adobe',
+  'components'
+]
+Components: 3
+First component properties: [
+  'lines',
+  'scaleX',
+  'scaleY',
+  'dctBlocks',
+  'blocksPerLine',
+  'blocksPerColumn',
+  'quantizationTable'
+]
+✅ SUCCESS: Found preserved DCT blocks in fork!
+DCT Blocks structure: {
+  rows: 120,
+  cols: 180,
+  blockType: 'object',
+  blockLength: 64,
+  blocksPerLine: 180,
+  blocksPerColumn: 120
+}
+Extracting from JPEG: 1440x960, 3 components
+✅ Extracted 42 bytes (336 bits) from 336 coefficients
+✅ E2E: Message extracted successfully: "This is a secret message for the E2E test!"
+
 ```

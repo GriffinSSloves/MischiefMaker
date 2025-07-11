@@ -51,6 +51,7 @@ import {
 import { Y_LUMA_QT_BASE, UV_CHROMA_QT_BASE, AA_SF } from './quantTables';
 import { computeHuffmanTable, generateHuffmanNrcodesValues } from './huffmanUtils';
 import { buildCategoryAndBitcode } from './bitcodeUtils';
+import { getHuffmanFrequencies } from './huffmanFrequency';
 import { buildRgbYuvLookupTable } from './colorTables';
 import { buildQuantTables } from './quantUtils';
 import { fDCTQuant as dctQuant } from './dctUtils';
@@ -64,8 +65,6 @@ var btoa =
 
 function JPEGEncoder(quality) {
   var self = this;
-  var fround = Math.round;
-  var ffloor = Math.floor;
   var YTable = new Array(64);
   var UVTable = new Array(64);
   var fdtbl_Y = new Array(64);
@@ -393,130 +392,6 @@ function JPEGEncoder(quality) {
     }
   }
 
-  // All helper functions moved inside the JPEGEncoder constructor scope
-  // to ensure they have access to `category`, `bitcode`, etc.
-  function getHuffmanFrequencies(quantizedComponents) {
-    var Y_DC_freq = new Array(256).fill(0);
-    var Y_AC_freq = new Array(256).fill(0);
-    var UV_DC_freq = new Array(256).fill(0);
-    var UV_AC_freq = new Array(256).fill(0);
-    var lastDCY = 0,
-      lastDCU = 0,
-      lastDCV = 0;
-
-    var component0 = quantizedComponents[0];
-    var component1 = quantizedComponents[1];
-    var component2 = quantizedComponents[2];
-
-    for (var blockRow = 0; blockRow < component0.length; blockRow++) {
-      for (var blockCol = 0; blockCol < component0[0].length; blockCol++) {
-        // Y component
-        var yBlock = component0[blockRow][blockCol];
-        var dc = yBlock[0];
-        var diff = dc - lastDCY;
-        lastDCY = dc;
-        Y_DC_freq[category[32767 + diff]]++;
-
-        var zero_run = 0;
-        for (var i = 1; i < 64; i++) {
-          if (yBlock[i] === 0) {
-            zero_run++;
-          } else {
-            while (zero_run >= 16) {
-              Y_AC_freq[0xf0]++;
-              zero_run -= 16;
-            }
-            Y_AC_freq[(zero_run << 4) | category[32767 + yBlock[i]]]++;
-            zero_run = 0;
-          }
-        }
-        if (zero_run > 0) Y_AC_freq[0x00]++;
-
-        // Cb and Cr components (for 4:2:0 subsampling)
-        if (blockRow % 2 === 0 && blockCol % 2 === 0) {
-          var cbRow = Math.floor(blockRow / 2);
-          var cbCol = Math.floor(blockCol / 2);
-
-          var cbBlock = component1[cbRow][cbCol];
-          dc = cbBlock[0];
-          diff = dc - lastDCU;
-          lastDCU = dc;
-          UV_DC_freq[category[32767 + diff]]++;
-          zero_run = 0;
-          for (var i = 1; i < 64; i++) {
-            if (cbBlock[i] === 0) zero_run++;
-            else {
-              while (zero_run >= 16) {
-                UV_AC_freq[0xf0]++;
-                zero_run -= 16;
-              }
-              UV_AC_freq[(zero_run << 4) | category[32767 + cbBlock[i]]]++;
-              zero_run = 0;
-            }
-          }
-          if (zero_run > 0) UV_AC_freq[0x00]++;
-
-          var crBlock = component2[cbRow][cbCol];
-          dc = crBlock[0];
-          diff = dc - lastDCV;
-          lastDCV = dc;
-          UV_DC_freq[category[32767 + diff]]++;
-          zero_run = 0;
-          for (var i = 1; i < 64; i++) {
-            if (crBlock[i] === 0) zero_run++;
-            else {
-              while (zero_run >= 16) {
-                UV_AC_freq[0xf0]++;
-                zero_run -= 16;
-              }
-              UV_AC_freq[(zero_run << 4) | category[32767 + crBlock[i]]]++;
-              zero_run = 0;
-            }
-          }
-          if (zero_run > 0) UV_AC_freq[0x00]++;
-        }
-      }
-    }
-    return { Y_DC_freq, Y_AC_freq, UV_DC_freq, UV_AC_freq };
-  }
-
-  function buildHuffmanTable(frequencies) {
-    var nodes = [];
-    for (var i = 0; i < frequencies.length; i++) {
-      if (frequencies[i] > 0) {
-        nodes.push({ value: i, freq: frequencies[i] });
-      }
-    }
-    nodes.sort((a, b) => a.freq - b.freq);
-
-    while (nodes.length > 1) {
-      var node1 = nodes.shift();
-      var node2 = nodes.shift();
-      var combined = {
-        freq: node1.freq + node2.freq,
-        children: [node1, node2],
-      };
-      nodes.push(combined);
-      nodes.sort((a, b) => a.freq - b.freq);
-    }
-
-    var huffmanTable = new Array(256);
-    function generateCodes(node, code, codeLength) {
-      if (node.children) {
-        generateCodes(node.children[0], code, codeLength + 1);
-        generateCodes(node.children[1], code | (1 << (15 - codeLength)), codeLength + 1);
-      } else {
-        huffmanTable[node.value] = [code >> (16 - codeLength), codeLength];
-      }
-    }
-
-    if (nodes.length > 0) {
-      generateCodes(nodes[0], 0, 0);
-    }
-
-    return huffmanTable;
-  }
-
   this.encode = function (image, quality) {
     // image data object
     var time_start = new Date().getTime();
@@ -616,11 +491,6 @@ function JPEGEncoder(quality) {
     var jpegDataUri = 'data:image/jpeg;base64,' + btoa(bitWriter.getData().join(''));
 
     bitWriter.reset();
-
-    // benchmarking
-    var duration = new Date().getTime() - time_start;
-    //console.log('Encoding time: '+ duration + 'ms');
-    //
 
     return jpegDataUri;
   };
@@ -834,9 +704,6 @@ function JPEGEncoder(quality) {
     var jpegData = bitWriter.getData();
     bitWriter.reset();
 
-    var duration = new Date().getTime() - time_start;
-    // console.log('Encoding time: ' + duration + 'ms');
-
     return jpegData;
   };
 
@@ -872,8 +739,6 @@ function JPEGEncoder(quality) {
     initRGBYUVTable();
 
     setQuality(quality);
-    var duration = new Date().getTime() - time_start;
-    //console.log('Initialization '+ duration + 'ms');
   }
 
   // FORK ADDITION: Write baseline standard Huffman tables (Annex K.3)
