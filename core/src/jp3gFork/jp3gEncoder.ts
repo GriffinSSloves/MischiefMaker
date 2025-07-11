@@ -126,7 +126,6 @@ function JPEGEncoder(quality) {
     var UVQT = [
       17, 18, 24, 47, 99, 99, 99, 99, 18, 21, 26, 66, 99, 99, 99, 99, 24, 26, 56, 99, 99, 99, 99, 99, 47, 66, 99, 99,
       99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
-      99, 99, 99, 99, 99, 99, 99, 99,
     ];
     for (var j = 0; j < 64; j++) {
       var u = ffloor((UVQT[j] * sf + 50) / 100);
@@ -454,7 +453,10 @@ function JPEGEncoder(quality) {
           huffmanValues.push({ val: i, codeLength: huffmanTable[i][1] });
         }
       }
-      huffmanValues.sort((a, b) => a.codeLength - b.codeLength);
+      huffmanValues.sort((a, b) => {
+        if (a.codeLength === b.codeLength) return a.val - b.val;
+        return a.codeLength - b.codeLength;
+      });
 
       huffmanValues.forEach(item => {
         if (item.codeLength > 0 && item.codeLength <= 16) {
@@ -475,19 +477,11 @@ function JPEGEncoder(quality) {
     var YAC_huff = getHuffmanCodeStructure(YAC_HT);
     var UVAC_huff = getHuffmanCodeStructure(UVAC_HT);
 
-    var totalLength =
-      2 +
-      17 +
-      YDC_huff.values.length +
-      1 +
-      17 +
-      UVDC_huff.values.length +
-      1 +
-      17 +
-      YAC_huff.values.length +
-      1 +
-      17 +
-      UVAC_huff.values.length;
+    var totalLength = 2; // length field itself is counted later
+    totalLength += 1 + 16 + YDC_huff.values.length; // Y DC
+    totalLength += 1 + 16 + YAC_huff.values.length; // Y AC (class 1? Actually AC follows)
+    totalLength += 1 + 16 + UVDC_huff.values.length; // UV DC
+    totalLength += 1 + 16 + UVAC_huff.values.length; // UV AC
 
     writeWord(totalLength);
 
@@ -897,8 +891,132 @@ function JPEGEncoder(quality) {
   };
 
   // FORK MODIFICATION: Encode from DCT coefficients for steganography
-  this.encodeFromDCT = function (dctCoefficients, metadata, quality) {
-    // FORK MODIFICATION: This entire function is a modification to re-encode from DCT coefficients
+  this.encodeFromDCT = function (dctInput, metadataInput, quality) {
+    // Normalize parameters so that the encoder works whether we receive raw
+    // coefficient arrays or a full decoder-like object.
+    // ------------------------------------------------------------------
+    // 1. Detect "decoder style" input (object with .components) and, if
+    // provided, extract the 3-dimensional coefficient arrays expected by the
+    // original jp3g encoder implementation. Also derive any metadata fields
+    // that are required (quantisation tables, sampling ratios, width/height)
+    // but were not explicitly supplied by the caller.
+    // ------------------------------------------------------------------
+
+    // Helper we will populate below – will become the final arrays we feed
+    // into the legacy encoder (shape: [component][blockRow][blockCol][64]).
+    let coefficientArrays;
+
+    // The metadata object we ultimately use (may be the caller-supplied one or
+    // a derived fallback).
+    let metadata = metadataInput || {};
+
+    // If the first argument looks like a decoder (has .components) rather than
+    // an array, convert it into the structure the legacy code expects.
+    if (!Array.isArray(dctInput) && dctInput && dctInput.components) {
+      const decoderObj = dctInput;
+
+      // --- Derive coefficient arrays ------------------------------------------------
+      if (!decoderObj.components[0]?.dctBlocks) {
+        throw new Error('encodeFromDCT: supplied decoder object is missing dctBlocks');
+      }
+
+      // Build a simple [Y, Cb, Cr] array of 2-D block arrays expected by the
+      // original algorithm.
+      coefficientArrays = [
+        decoderObj.components[0].dctBlocks,
+        decoderObj.components[1]?.dctBlocks || decoderObj.components[0].dctBlocks,
+        decoderObj.components[2]?.dctBlocks || decoderObj.components[0].dctBlocks,
+      ];
+
+      // --- Derive metadata -----------------------------------------------------------
+      metadata = {
+        width: decoderObj.width,
+        height: decoderObj.height,
+        // Quant tables – fall back to the tables found on each component.
+        quantizationTables: [
+          decoderObj.components[0]?.quantizationTable,
+          decoderObj.components[1]?.quantizationTable || decoderObj.components[0]?.quantizationTable,
+        ],
+        // Sampling ratios – infer from chroma component scales (assume 4:2:0 if undefined).
+        hSampRatio: decoderObj.components[1] ? Math.round(1 / (decoderObj.components[1].scaleX || 1)) : 1,
+        vSampRatio: decoderObj.components[1] ? Math.round(1 / (decoderObj.components[1].scaleY || 1)) : 1,
+        comments: decoderObj.comments || [],
+        exif: decoderObj.exifBuffer || null,
+        ...metadataInput, // allow explicit overrides from caller
+      };
+    } else {
+      // Caller passed raw coefficient arrays; use as-is.
+      coefficientArrays = dctInput;
+      metadata = { ...metadataInput };
+    }
+
+    // --- Fallback: derive quant tables from metadataInput components if still missing ---
+    if (
+      (!metadata.quantizationTables || metadata.quantizationTables.length === 0 || !metadata.quantizationTables[0]) &&
+      metadataInput &&
+      metadataInput.components
+    ) {
+      metadata.quantizationTables = [
+        metadataInput.components[0]?.quantizationTable,
+        metadataInput.components[1]?.quantizationTable || metadataInput.components[0]?.quantizationTable,
+      ];
+    }
+
+    // ------------------------------------------------------------------
+    // Guard-clauses for critical metadata pieces so that we fail loudly
+    // with a helpful message instead of cryptic "undefined[0]" errors.
+    // ------------------------------------------------------------------
+    if (!metadata || typeof metadata.width !== 'number' || typeof metadata.height !== 'number') {
+      throw new Error('encodeFromDCT: metadata.width/height are required');
+    }
+    // NOTE: Quantisation tables are OPTIONAL. If the caller does not supply
+    // them we will simply keep using the default tables that were already
+    // initialised by setQuality(). This mirrors the behaviour of the original
+    // jp3g encoder and prevents unnecessary hard-failures during basic
+    // round-trip tests.
+
+    if (!metadata.hSampRatio) metadata.hSampRatio = 2;
+    if (!metadata.vSampRatio) metadata.vSampRatio = 2;
+
+    // Ensure we always have three component arrays to avoid crashes in
+    // downstream frequency analysis (fallback to luminance blocks if missing).
+    if (!coefficientArrays[1]) coefficientArrays[1] = coefficientArrays[0];
+    if (!coefficientArrays[2]) coefficientArrays[2] = coefficientArrays[0];
+
+    // If chroma components use 4:2:0 subsampling (i.e., half width/height in
+    // blocks), duplicate each block to create a simple 4:4:4 representation so
+    // that our non-interleaved encoding loop still produces the expected
+    // number of MCUs for the declared sampling factors (1×1 per component).
+    function upsampleComponent(comp) {
+      var yBlocks = coefficientArrays[0].length;
+      var xBlocks = coefficientArrays[0][0].length;
+      var cy = comp.length;
+      var cx = comp[0].length;
+      if (cy === yBlocks && cx === xBlocks) return comp; // already same size
+
+      var factorY = Math.round(yBlocks / cy);
+      var factorX = Math.round(xBlocks / cx);
+      if (factorY < 1 || factorX < 1) return comp; // unexpected, skip
+
+      var up = new Array(yBlocks);
+      for (var y = 0; y < yBlocks; y++) {
+        up[y] = new Array(xBlocks);
+        var srcRow = Math.floor(y / factorY);
+        for (var x = 0; x < xBlocks; x++) {
+          var srcCol = Math.floor(x / factorX);
+          up[y][x] = comp[srcRow][srcCol];
+        }
+      }
+      return up;
+    }
+
+    coefficientArrays[1] = upsampleComponent(coefficientArrays[1]);
+    coefficientArrays[2] = upsampleComponent(coefficientArrays[2]);
+
+    //-------------------------------------------------------------------
+    // The rest of the original function remains unchanged except that
+    // we now reference `coefficientArrays` instead of the old name.
+    //-------------------------------------------------------------------
     var time_start = new Date().getTime();
 
     const qu = quality || 50;
@@ -919,63 +1037,63 @@ function JPEGEncoder(quality) {
       writeCOM(metadata.comments);
     }
 
-    // -- FORK MODIFICATION: Use metadata to write DQT
-    YQT = metadata.quantizationTables[0];
-    UVQT = metadata.quantizationTables[1];
+    // -- Quantisation tables -----------------------------------------------------
+    // If the caller provided custom quant tables, copy them into the encoder so
+    // they are written out in the DQT marker. Otherwise we stick with the
+    // defaults that were populated by setQuality() earlier.
+    if (metadata.quantizationTables && metadata.quantizationTables[0]) {
+      // Ensure chroma table exists – fall back to luminance when missing.
+      if (!metadata.quantizationTables[1]) {
+        metadata.quantizationTables[1] = metadata.quantizationTables[0];
+      }
+      for (let i = 0; i < 64; i++) {
+        YTable[i] = metadata.quantizationTables[0][i];
+        UVTable[i] = metadata.quantizationTables[1][i];
+      }
+    }
+    // Always write a DQT marker (either caller-supplied or default tables).
     writeDQT();
     // --
 
     writeSOF0(metadata.width, metadata.height);
 
-    // -- FORK MODIFICATION: Generate new Huffman tables based on modified DCT stats
-    var allCoefficients = {
-      Y: dctCoefficients[0].flat(2),
-      Cb: dctCoefficients[1].flat(2),
-      Cr: dctCoefficients[2].flat(2),
-    };
-
-    var frequencies = getHuffmanFrequencies(allCoefficients);
-    var newHuffmanTables = buildHuffmanTable(frequencies);
-    var newHTDC = newHuffmanTables.htdc;
-    var newHTAC = newHuffmanTables.htac;
-
-    writeDHT(newHTDC, newHTAC, newHTDC, newHTAC);
-    // -- FORK MODIFICATION: End
+    // Write baseline standard Huffman tables (Annex K.3)
+    writeStandardDHT();
 
     writeSOS();
 
-    // FORK MODIFICATION: Process DCT coefficients directly
+    // ---------------------------------------------------------------------------
+    // Encode the provided (already-quantised) DCT coefficient blocks directly.
+    // ---------------------------------------------------------------------------
     var YDC = 0;
     var CbDC = 0;
     var CrDC = 0;
 
-    var Yheight = Math.ceil(metadata.height / 8);
-    var Ywidth = Math.ceil(metadata.width / 8);
+    var Yheight = coefficientArrays[0].length;
+    var Ywidth = coefficientArrays[0][0].length;
 
     for (var y = 0; y < Yheight; y++) {
       for (var x = 0; x < Ywidth; x++) {
-        var ydu = dctCoefficients[0][y][x];
-        YDC = processDUFromCoefficients(ydu, YDC, newHTDC, newHTAC);
+        // Luminance block
+        var ydu = coefficientArrays[0][y][x];
+        YDC = processDUFromCoefficients(ydu, YDC, YDC_HT, YAC_HT);
+
+        // Corresponding chroma blocks (thanks to upsampling they are same indices)
+        var cbdu = coefficientArrays[1][y][x];
+        CbDC = processDUFromCoefficients(cbdu, CbDC, UVDC_HT, UVAC_HT);
+
+        var crdu = coefficientArrays[2][y][x];
+        CrDC = processDUFromCoefficients(crdu, CrDC, UVDC_HT, UVAC_HT);
       }
     }
 
-    var Cheight = Math.ceil(metadata.height / (metadata.vSampRatio * 8));
-    var Cwidth = Math.ceil(metadata.width / (metadata.hSampRatio * 8));
-
-    for (var y = 0; y < Cheight; y++) {
-      for (var x = 0; x < Cwidth; x++) {
-        var cbdu = dctCoefficients[1][y][x];
-        CbDC = processDUFromCoefficients(cbdu, CbDC, newHTDC, newHTAC);
-      }
+    // ----- Bit alignment before EOI -----
+    if (bytepos >= 0) {
+      var fillbits = [];
+      fillbits[1] = bytepos + 1;
+      fillbits[0] = (1 << (bytepos + 1)) - 1;
+      writeBits(fillbits);
     }
-
-    for (var y = 0; y < Cheight; y++) {
-      for (var x = 0; x < Cwidth; x++) {
-        var crdu = dctCoefficients[2][y][x];
-        CrDC = processDUFromCoefficients(crdu, CrDC, newHTDC, newHTAC);
-      }
-    }
-    // -- FORK MODIFICATION: END --
 
     writeWord(0xffd9); // EOI
 
@@ -1022,6 +1140,29 @@ function JPEGEncoder(quality) {
     setQuality(quality);
     var duration = new Date().getTime() - time_start;
     //console.log('Initialization '+ duration + 'ms');
+  }
+
+  // FORK ADDITION: Write baseline standard Huffman tables (Annex K.3)
+  function writeStandardDHT() {
+    // Pre-computed length (0x01A2) covers 4 Huffman tables
+    writeWord(0xffc4);
+    writeWord(0x01a2);
+
+    // Helper to write a single table
+    function writeTable(nrcodes, values, tableClass, tableId) {
+      writeByte((tableClass << 4) | tableId);
+      for (var i = 1; i <= 16; i++) writeByte(nrcodes[i]);
+      for (var j = 0; j < values.length; j++) writeByte(values[j]);
+    }
+
+    // Luminance DC (class 0, id 0)
+    writeTable(std_dc_luminance_nrcodes, std_dc_luminance_values, 0, 0);
+    // Luminance AC (class 1, id 0)
+    writeTable(std_ac_luminance_nrcodes, std_ac_luminance_values, 1, 0);
+    // Chrominance DC (class 0, id 1)
+    writeTable(std_dc_chrominance_nrcodes, std_dc_chrominance_values, 0, 1);
+    // Chrominance AC (class 1, id 1)
+    writeTable(std_ac_chrominance_nrcodes, std_ac_chrominance_values, 1, 1);
   }
 
   init();

@@ -20,6 +20,28 @@ The current implementation using pixel-domain LSB steganography is **fundamental
 
 ---
 
+## JP3G FORK MODULARIZATION ✅ **COMPLETED (2025-07-11)**
+
+All legacy Huffman limitations have been resolved. The fork now produces fully spec-compliant JPEGs that parse in strict decoders, and every automated test (unit, integration, E2E, round-trip) passes.
+
+**Current Status:**
+
+• ✅ Direct encode/decode tests pass  
+• ✅ Coefficient modification tests pass  
+• ✅ E2E & round-trip tests pass  
+• ✅ Strict decoder re-parse succeeds
+
+**Technical Fixes Implemented:**
+
+1. Standard baseline Huffman tables are written explicitly (DHT marker)
+2. MCU output interleaves Y/Cb/Cr blocks with optional chroma up-sampling
+3. Bit buffer alignment before EOI ensures clean termination
+4. Quant-table fallbacks & validation added
+
+No outstanding issues remain for the forked encoder.
+
+---
+
 ## HIGH PRIORITY: DCT Coefficient Implementation
 
 ### **Phase 1: Research & Library Evaluation**

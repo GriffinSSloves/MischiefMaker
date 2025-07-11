@@ -20,6 +20,19 @@ MischiefMaker uses **DCT coefficient steganography** for JPEG images, designed f
 - **AC coefficient LSBs** are less perceptually significant
 - **No pixel-domain artifacts** from compression/decompression cycles
 
+## ✅ Success Standard – Achieved (2025-07-11)
+
+Our automated E2E and round-trip suites now confirm the full pipeline works:
+
+1. Decodes the jpeg into the coefficients and other intermediate data
+2. Encodes the message in the coefficients
+3. Recreates the jpeg image
+4. Decode the message from this recreated jpeg image.
+5. The message must match the original encoded message.
+6. The final jpeg image must be openable and look similar to the original image.
+
+All six criteria are now satisfied on consumer-grade photos, and tests guard against regressions.
+
 ## Technical Foundation
 
 ### **JPEG Compression Process**

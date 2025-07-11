@@ -7,7 +7,7 @@ import { Jp3gForkClient } from './jp3gForkClient';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-describe.skip('Jp3gForkClient E2E', () => {
+describe('Jp3gForkClient E2E', () => {
   it('should perform a full round-trip steganography cycle', async () => {
     // 1. Setup
     const client = new Jp3gForkClient();

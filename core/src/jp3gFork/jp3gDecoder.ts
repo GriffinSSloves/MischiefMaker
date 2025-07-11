@@ -928,6 +928,8 @@ var JpegImage = (function jpegImage() {
           dctBlocks: preservedBlocks,
           blocksPerLine: component.blocksPerLine,
           blocksPerColumn: component.blocksPerColumn,
+          // Expose original quantisation table for re-encoding
+          quantizationTable: component.quantizationTable,
         });
       }
     },

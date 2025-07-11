@@ -4,7 +4,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { Jp3gForkClient } from './jp3gForkClient';
 
-describe.skip('Jp3gForkClient', () => {
+describe('Jp3gForkClient', () => {
   const client = new Jp3gForkClient();
 
   // Get test image
