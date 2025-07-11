@@ -43,6 +43,7 @@ import { requestMemoryAllocation, resetMaxMemoryUsage, getBytesAllocated } from 
 import { idctBlock } from './utils/idct';
 import { clampTo8bit } from './utils/math';
 import { buildComponentData as buildComponentDataUtil } from './utils/componentDataBuilder';
+import { createHuffmanDecoders } from './utils/huffmanDecoders';
 
 const JpegImage = (function jpegImage() {
   'use strict';
@@ -117,128 +118,20 @@ const JpegImage = (function jpegImage() {
       if (n >= 1 << (length - 1)) {
         return n;
       }
-      return n + (-1 << length) + 1;
+      return (n ?? 0) + (-1 << length) + 1;
     }
-    function decodeBaseline(component, zz) {
-      const t = decodeHuffman(component.huffmanTableDC);
-      const diff = t === 0 ? 0 : receiveAndExtend(t);
-      zz[0] = component.pred += diff;
-      let k = 1;
-      while (k < 64) {
-        const rs = decodeHuffman(component.huffmanTableAC);
-        const s = rs & 15,
-          r = rs >> 4;
-        if (s === 0) {
-          if (r < 15) {
-            break;
-          }
-          k += 16;
-          continue;
-        }
-        k += r;
-        const z = dctZigZag[k];
-        zz[z] = receiveAndExtend(s);
-        k++;
-      }
-    }
-    function decodeDCFirst(component, zz) {
-      const t = decodeHuffman(component.huffmanTableDC);
-      const diff = t === 0 ? 0 : receiveAndExtend(t) << successive;
-      zz[0] = component.pred += diff;
-    }
-    function decodeDCSuccessive(component, zz) {
-      zz[0] |= readBit() << successive;
-    }
-    let eobrun = 0;
-    function decodeACFirst(component, zz) {
-      if (eobrun > 0) {
-        eobrun--;
-        return;
-      }
-      let k = spectralStart,
-        e = spectralEnd;
-      while (k <= e) {
-        const rs = decodeHuffman(component.huffmanTableAC);
-        const s = rs & 15,
-          r = rs >> 4;
-        if (s === 0) {
-          if (r < 15) {
-            eobrun = receive(r) + (1 << r) - 1;
-            break;
-          }
-          k += 16;
-          continue;
-        }
-        k += r;
-        const z = dctZigZag[k];
-        zz[z] = receiveAndExtend(s) * (1 << successive);
-        k++;
-      }
-    }
-    let successiveACState = 0,
-      successiveACNextValue;
-    function decodeACSuccessive(component, zz) {
-      var k = spectralStart,
-        e = spectralEnd,
-        r = 0;
-      while (k <= e) {
-        const z = dctZigZag[k];
-        const direction = zz[z] < 0 ? -1 : 1;
-        switch (successiveACState) {
-          case 0: // initial state
-            var rs = decodeHuffman(component.huffmanTableAC);
-            var s = rs & 15,
-              r = rs >> 4;
-            if (s === 0) {
-              if (r < 15) {
-                eobrun = receive(r) + (1 << r);
-                successiveACState = 4;
-              } else {
-                r = 16;
-                successiveACState = 1;
-              }
-            } else {
-              if (s !== 1) {
-                throw new Error('invalid ACn encoding');
-              }
-              successiveACNextValue = receiveAndExtend(s);
-              successiveACState = r ? 2 : 3;
-            }
-            continue;
-          case 1: // skipping r zero items
-          case 2:
-            if (zz[z]) {
-              zz[z] += (readBit() << successive) * direction;
-            } else {
-              r--;
-              if (r === 0) {
-                successiveACState = successiveACState == 2 ? 3 : 0;
-              }
-            }
-            break;
-          case 3: // set value for a zero item
-            if (zz[z]) {
-              zz[z] += (readBit() << successive) * direction;
-            } else {
-              zz[z] = successiveACNextValue << successive;
-              successiveACState = 0;
-            }
-            break;
-          case 4: // eob
-            if (zz[z]) {
-              zz[z] += (readBit() << successive) * direction;
-            }
-            break;
-        }
-        k++;
-      }
-      if (successiveACState === 4) {
-        eobrun--;
-        if (eobrun === 0) {
-          successiveACState = 0;
-        }
-      }
-    }
+
+    const { decodeBaseline, decodeDCFirst, decodeDCSuccessive, decodeACFirst, decodeACSuccessive } =
+      createHuffmanDecoders({
+        decodeHuffman,
+        receive,
+        receiveAndExtend,
+        readBit,
+        spectralStart,
+        spectralEnd,
+        successive,
+      });
+
     function decodeMcu(component, decode, mcu, row, col) {
       const mcuRow = (mcu / mcusPerLine) | 0;
       const mcuCol = mcu % mcusPerLine;
@@ -291,7 +184,6 @@ const JpegImage = (function jpegImage() {
       for (i = 0; i < componentsLength; i++) {
         components[i].pred = 0;
       }
-      eobrun = 0;
 
       if (componentsLength == 1) {
         component = components[0];
