@@ -280,7 +280,7 @@ describe('Jp3gForkClient', () => {
     console.log(`Parsed JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
 
     // Try to re-encode WITHOUT any modifications
-    const { JPEGEncoder } = await import('../jp3gFork/jp3gEncoder');
+    const { JPEGEncoder } = await import('../jp3gFork/encoder/jp3gEncoder');
     const encoder = new (JPEGEncoder as any)(85);
 
     // Prepare DCT data exactly as parsed (no modifications)

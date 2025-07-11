@@ -40,7 +40,11 @@ Basic GUI blocking jpeg encoder
 // – Steganography extensions, TypeScript migration scaffolding and API tweaks
 // ---------------------------------------------------------------------------
 
-import { ZIG_ZAG } from './constants';
+import { Buffer } from 'buffer';
+import { buildCategoryAndBitcode } from '../bitcodeUtils';
+import { BitWriter, BitSpec } from '../BitWriter';
+import { buildRgbYuvLookupTable } from '../colorTables';
+import { ZIG_ZAG } from '../constants/constants';
 import {
   STD_DC_LUMINANCE_NRCODES,
   STD_DC_LUMINANCE_VALUES,
@@ -50,25 +54,22 @@ import {
   STD_DC_CHROMINANCE_VALUES,
   STD_AC_CHROMINANCE_NRCODES,
   STD_AC_CHROMINANCE_VALUES,
-} from './huffmanConstants';
-import { computeHuffmanTable, HuffmanTable } from './huffmanUtils';
-import { buildCategoryAndBitcode } from './bitcodeUtils';
-import { buildRgbYuvLookupTable } from './colorTables';
-import { buildQuantTables } from './quantUtils';
-import { fDCTQuant } from './dctUtils';
-import { BitWriter, BitSpec } from './BitWriter';
+} from '../constants/huffmanConstants';
+import { fDCTQuant } from '../dctUtils';
+import { ComponentBlocks, QuantizedComponents } from '../huffmanFrequency';
+import { HuffmanTable, computeHuffmanTable } from '../huffmanUtils';
 import {
   writeAPP0,
   writeAPP1,
   writeSOF0,
   writeCOM,
   writeSOS,
-  writeDQT as writeDQTHeader,
-  writeDHT as writeDHTHeader,
-  writeStandardDHT as writeStandardDHTHeader,
-} from './jpegHeaderWriters';
-import { IRgbaImage, IEncodeMetadata, QuantizedComponents, ComponentBlocks, IJpegEncoder } from './types';
-import { Buffer } from 'buffer';
+  writeDHT,
+  writeDQT,
+  writeStandardDHT,
+} from '../jpegHeaderWriters';
+import { buildQuantTables } from '../quantUtils';
+import { IRgbaImage, IEncodeMetadata, IJpegEncoder } from '../types/types';
 
 // Helper interface describing a decoder component shape we care about
 interface IDecoderComponent {
@@ -168,9 +169,9 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
   const writeCOMWrapper = (c?: string[]) => writeCOM(bitWriter, c);
   const writeSOSWrapper = () => writeSOS(bitWriter);
 
-  const writeDQTWrapper = () => writeDQTHeader(bitWriter, YTable, UVTable);
-  const writeDHTWrapper = () => writeDHTHeader(bitWriter, YDC_HT, YAC_HT, UVDC_HT, UVAC_HT);
-  const writeStandardDHTWrapper = () => writeStandardDHTHeader(bitWriter);
+  const writeDQTWrapper = () => writeDQT(bitWriter, YTable, UVTable);
+  const writeDHTWrapper = () => writeDHT(bitWriter, YDC_HT, YAC_HT, UVDC_HT, UVAC_HT);
+  const writeStandardDHTWrapper = () => writeStandardDHT(bitWriter);
 
   function processDUFromCoefficients(
     dctCoefficients: number[],

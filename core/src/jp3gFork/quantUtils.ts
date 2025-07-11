@@ -5,8 +5,8 @@
  *   • fdtbl_Y / fdtbl_UV – pre-scaled floating-point divisors used during DCT
  */
 
-import { ZIG_ZAG } from './constants';
-import { Y_LUMA_QT_BASE, UV_CHROMA_QT_BASE, AA_SF } from './quantTables';
+import { ZIG_ZAG } from './constants/constants';
+import { Y_LUMA_QT_BASE, UV_CHROMA_QT_BASE, AA_SF } from './constants/quantTables';
 
 export interface QuantTablesResult {
   YTable: number[];

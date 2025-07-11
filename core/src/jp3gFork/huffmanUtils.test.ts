@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeHuffmanTable, generateHuffmanNrcodesValues } from './huffmanUtils';
-import { STD_DC_LUMINANCE_NRCODES, STD_DC_LUMINANCE_VALUES } from './huffmanConstants';
+import { STD_DC_LUMINANCE_NRCODES, STD_DC_LUMINANCE_VALUES } from './constants/huffmanConstants';
 
 // Clone readonly constant arrays into mutable copies for the utility functions
 const DC_NR = [...STD_DC_LUMINANCE_NRCODES];
