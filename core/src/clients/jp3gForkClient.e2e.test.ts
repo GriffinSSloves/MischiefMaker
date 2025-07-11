@@ -25,6 +25,7 @@ describe('Jp3gForkClient E2E', () => {
     const embedResult = await client.embedMessageAndReencode(imageBuffer, message);
     expect(embedResult.success).toBe(true);
     expect(embedResult.modifiedJpeg).toBeInstanceOf(Uint8Array);
+    expect(embedResult.coefficientsModified ?? 0).toBeGreaterThan(0);
 
     if (!embedResult.modifiedJpeg) {
       throw new Error('Modified JPEG is undefined');
