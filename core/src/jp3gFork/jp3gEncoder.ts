@@ -182,8 +182,8 @@ function JPEGEncoder(this: any, quality: number = 50) {
     HTDC: HuffmanTable,
     HTAC: HuffmanTable
   ): number {
-    var EOB = HTAC[0x00];
-    var M16 = -16;
+    const EOB = HTAC[0x00];
+    const M16zeroes = HTAC[0xf0];
     var pos;
     var I16 = 16;
     var I63 = 63;
@@ -223,7 +223,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
       var nrzeroes = i - startpos;
       if (nrzeroes >= I16) {
         lng = nrzeroes >> 4;
-        for (var nrmarker = 1; nrmarker <= lng; ++nrmarker) writeBits(M16);
+        for (let nrmarker = 1; nrmarker <= lng; ++nrmarker) writeBits(M16zeroes);
         nrzeroes = nrzeroes & 0xf;
       }
       pos = 32767 + DU[i];
@@ -239,8 +239,8 @@ function JPEGEncoder(this: any, quality: number = 50) {
   }
 
   function processDU(CDU: number[], fdtbl: number[], DC: number, HTDC: HuffmanTable, HTAC: HuffmanTable): number {
-    var EOB = HTAC[0x00];
-    var M16zeroes = HTAC[0xf0];
+    const EOB = HTAC[0x00];
+    const M16zeroes = HTAC[0xf0];
     var pos;
     var I16 = 16;
     var I63 = 63;
@@ -276,7 +276,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
       var nrzeroes = i - startpos;
       if (nrzeroes >= I16) {
         lng = nrzeroes >> 4;
-        for (var nrmarker = 1; nrmarker <= lng; ++nrmarker) writeBits(M16zeroes);
+        for (let nrmarker = 1; nrmarker <= lng; ++nrmarker) writeBits(M16zeroes);
         nrzeroes = nrzeroes & 0xf;
       }
       pos = 32767 + DU[i];
@@ -425,7 +425,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
 
     // If the first argument looks like a decoder (has .components) rather than
     // an array, convert it into the structure the legacy code expects.
-    if (!Array.isArray(dctInput) && dctInput && dctInput.components) {
+    if (!Array.isArray(dctInput) && isDecoderLike(dctInput)) {
       const decoderObj = dctInput;
 
       // --- Derive coefficient arrays ------------------------------------------------
@@ -458,20 +458,20 @@ function JPEGEncoder(this: any, quality: number = 50) {
         ...metadataInput, // allow explicit overrides from caller
       };
     } else {
-      // Caller passed raw coefficient arrays; use as-is.
-      coefficientArrays = dctInput;
+      // Caller passed raw coefficient arrays (assumed already validated)
+      coefficientArrays = dctInput as QuantizedComponents;
       metadata = { ...metadataInput };
     }
 
     // --- Fallback: derive quant tables from metadataInput components if still missing ---
     if (
       (!metadata.quantizationTables || metadata.quantizationTables.length === 0 || !metadata.quantizationTables[0]) &&
-      metadataInput &&
-      metadataInput.components
+      (metadata as any).components
     ) {
+      const comps = (metadata as any).components as any[];
       metadata.quantizationTables = [
-        metadataInput.components[0]?.quantizationTable,
-        metadataInput.components[1]?.quantizationTable || metadataInput.components[0]?.quantizationTable,
+        comps[0]?.quantizationTable,
+        comps[1]?.quantizationTable || comps[0]?.quantizationTable,
       ];
     }
 
@@ -566,7 +566,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
     writeDQTWrapper();
     // --
 
-    writeSOF0Wrapper(metadata.width, metadata.height);
+    writeSOF0Wrapper(metadata.width!, metadata.height!);
 
     // Write baseline standard Huffman tables (Annex K.3)
     writeStandardDHTWrapper();
@@ -705,6 +705,26 @@ export interface IJpegEncoder {
     metadata?: Partial<IEncodeMetadata>,
     quality?: number
   ): Uint8Array | Buffer;
+}
+
+// Internal helper type for a jp3g decoder-like object we might receive.
+interface IDecoderLike {
+  components: any[];
+  width: number;
+  height: number;
+  comments?: string[];
+  exifBuffer?: Uint8Array | null;
+}
+
+function isDecoderLike(obj: unknown): obj is IDecoderLike {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'components' in obj &&
+    Array.isArray((obj as any).components) &&
+    typeof (obj as any).width === 'number' &&
+    typeof (obj as any).height === 'number'
+  );
 }
 
 // ---------------------------------------------------------------------------
