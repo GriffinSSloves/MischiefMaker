@@ -49,6 +49,8 @@ import {
   STD_AC_CHROMINANCE_VALUES,
 } from './huffmanConstants';
 import { Y_LUMA_QT_BASE, UV_CHROMA_QT_BASE, AA_SF } from './quantTables';
+import { computeHuffmanTable, generateHuffmanNrcodesValues } from './huffmanUtils';
+import { buildCategoryAndBitcode } from './bitcodeUtils';
 
 var btoa =
   btoa ||
@@ -128,22 +130,7 @@ function JPEGEncoder(quality) {
     }
   }
 
-  function computeHuffmanTbl(nrcodes, std_table) {
-    var codevalue = 0;
-    var pos_in_table = 0;
-    var HT = new Array();
-    for (var k = 1; k <= 16; k++) {
-      for (var j = 1; j <= nrcodes[k]; j++) {
-        HT[std_table[pos_in_table]] = [];
-        HT[std_table[pos_in_table]][0] = codevalue;
-        HT[std_table[pos_in_table]][1] = k;
-        pos_in_table++;
-        codevalue++;
-      }
-      codevalue *= 2;
-    }
-    return HT;
-  }
+  const computeHuffmanTbl = computeHuffmanTable as any;
 
   function initHuffmanTbl() {
     YDC_HT = computeHuffmanTbl(std_dc_luminance_nrcodes, std_dc_luminance_values);
@@ -153,26 +140,9 @@ function JPEGEncoder(quality) {
   }
 
   function initCategoryNumber() {
-    var nrlower = 1;
-    var nrupper = 2;
-    for (var cat = 1; cat <= 15; cat++) {
-      //Positive numbers
-      for (var nr = nrlower; nr < nrupper; nr++) {
-        category[32767 + nr] = cat;
-        bitcode[32767 + nr] = [];
-        bitcode[32767 + nr][1] = cat;
-        bitcode[32767 + nr][0] = nr;
-      }
-      //Negative numbers
-      for (var nrneg = -(nrupper - 1); nrneg <= -nrlower; nrneg++) {
-        category[32767 + nrneg] = cat;
-        bitcode[32767 + nrneg] = [];
-        bitcode[32767 + nrneg][1] = cat;
-        bitcode[32767 + nrneg][0] = nrupper - 1 + nrneg;
-      }
-      nrlower <<= 1;
-      nrupper <<= 1;
-    }
+    const { category: catTbl, bitcode: bcTbl } = buildCategoryAndBitcode();
+    category = catTbl;
+    bitcode = bcTbl as any;
   }
 
   function initRGBYUVTable() {
@@ -424,39 +394,11 @@ function JPEGEncoder(quality) {
   function writeDHT() {
     writeWord(0xffc4); // marker
 
-    // Dynamically generate nrcodes and values
-    function getHuffmanCodeStructure(huffmanTable) {
-      var nrcodes = new Array(17).fill(0);
-      var values = [];
-      var huffmanValues = [];
-      for (var i = 0; i < huffmanTable.length; i++) {
-        if (huffmanTable[i]) {
-          huffmanValues.push({ val: i, codeLength: huffmanTable[i][1] });
-        }
-      }
-      huffmanValues.sort((a, b) => {
-        if (a.codeLength === b.codeLength) return a.val - b.val;
-        return a.codeLength - b.codeLength;
-      });
-
-      huffmanValues.forEach(item => {
-        if (item.codeLength > 0 && item.codeLength <= 16) {
-          nrcodes[item.codeLength]++;
-          values.push(item.val);
-        }
-      });
-
-      // Ensure nrcodes has 16 elements for JPEG standard
-      while (nrcodes.length > 17) nrcodes.pop();
-      while (nrcodes.length < 17) nrcodes.push(0);
-
-      return { nrcodes: nrcodes.slice(1), values };
-    }
-
-    var YDC_huff = getHuffmanCodeStructure(YDC_HT);
-    var UVDC_huff = getHuffmanCodeStructure(UVDC_HT);
-    var YAC_huff = getHuffmanCodeStructure(YAC_HT);
-    var UVAC_huff = getHuffmanCodeStructure(UVAC_HT);
+    // Generate nrcodes and values using shared utility
+    const YDC_huff = generateHuffmanNrcodesValues(YDC_HT);
+    const UVDC_huff = generateHuffmanNrcodesValues(UVDC_HT);
+    const YAC_huff = generateHuffmanNrcodesValues(YAC_HT);
+    const UVAC_huff = generateHuffmanNrcodesValues(UVAC_HT);
 
     var totalLength = 2; // length field itself is counted later
     totalLength += 1 + 16 + YDC_huff.values.length; // Y DC
