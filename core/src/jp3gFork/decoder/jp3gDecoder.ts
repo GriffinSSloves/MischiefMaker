@@ -40,6 +40,8 @@ import {
 
 import { buildHuffmanTable as buildHuffmanTableUtil } from './utils/huffmanTable';
 import { requestMemoryAllocation, resetMaxMemoryUsage, getBytesAllocated } from './utils/memoryManager';
+import { idctBlock } from './utils/idct';
+import { clampTo8bit } from './utils/math';
 
 var JpegImage = (function jpegImage() {
   'use strict';
@@ -510,10 +512,6 @@ var JpegImage = (function jpegImage() {
       }
     }
     return lines;
-  }
-
-  function clampTo8bit(a) {
-    return a < 0 ? 0 : a > 255 ? 255 : a;
   }
 
   constructor.prototype = {
