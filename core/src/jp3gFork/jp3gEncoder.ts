@@ -184,17 +184,17 @@ function JPEGEncoder(this: any, quality: number = 50) {
   ): number {
     const EOB = HTAC[0x00];
     const M16zeroes = HTAC[0xf0];
-    var pos;
-    var I16 = 16;
-    var I63 = 63;
+    let pos;
+    const I16 = 16;
+    const I63 = 63;
 
     // The coefficients are already quantized, so we just need to reorder them
-    for (var j = 0; j < 64; ++j) {
+    for (let j = 0; j < 64; ++j) {
       DU[ZigZag[j]] = dctCoefficients[j];
     }
 
     // Calculate DC difference
-    var DC_val = DU[0] - DC;
+    const DC_val = DU[0] - DC;
     DC = DU[0];
 
     // Encode DC
@@ -207,7 +207,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
     }
 
     // Encode ACs
-    var end0pos = 63;
+    let end0pos = 63;
     for (; end0pos > 0 && DU[end0pos] == 0; end0pos--) {}
 
     if (end0pos == 0) {
@@ -215,12 +215,12 @@ function JPEGEncoder(this: any, quality: number = 50) {
       return DC;
     }
 
-    var i = 1;
-    var lng;
+    let i = 1;
+    let lng;
     while (i <= end0pos) {
-      var startpos = i;
+      const startpos = i;
       for (; DU[i] == 0 && i <= end0pos; ++i) {}
-      var nrzeroes = i - startpos;
+      let nrzeroes = i - startpos;
       if (nrzeroes >= I16) {
         lng = nrzeroes >> 4;
         for (let nrmarker = 1; nrmarker <= lng; ++nrmarker) writeBits(M16zeroes);
@@ -241,16 +241,16 @@ function JPEGEncoder(this: any, quality: number = 50) {
   function processDU(CDU: number[], fdtbl: number[], DC: number, HTDC: HuffmanTable, HTAC: HuffmanTable): number {
     const EOB = HTAC[0x00];
     const M16zeroes = HTAC[0xf0];
-    var pos;
-    var I16 = 16;
-    var I63 = 63;
-    var I64 = 64;
-    var DU_DCT = fDCTQuant(CDU, fdtbl);
+    let pos;
+    const I16 = 16;
+    const I63 = 63;
+    const I64 = 64;
+    const DU_DCT = fDCTQuant(CDU, fdtbl);
     //ZigZag reorder
-    for (var j = 0; j < I64; ++j) {
+    for (let j = 0; j < I64; ++j) {
       DU[ZigZag[j]] = DU_DCT[j];
     }
-    var Diff = DU[0] - DC;
+    const Diff = DU[0] - DC;
     DC = DU[0];
     //Encode DC
     if (Diff == 0) {
@@ -261,19 +261,19 @@ function JPEGEncoder(this: any, quality: number = 50) {
       writeBits(bitcode[pos]);
     }
     //Encode ACs
-    var end0pos = 63; // was const... which is crazy
+    let end0pos = 63; // was const... which is crazy
     for (; end0pos > 0 && DU[end0pos] == 0; end0pos--) {}
     //end0pos = first element in reverse order !=0
     if (end0pos == 0) {
       writeBits(EOB);
       return DC;
     }
-    var i = 1;
-    var lng;
+    let i = 1;
+    let lng;
     while (i <= end0pos) {
-      var startpos = i;
+      const startpos = i;
       for (; DU[i] == 0 && i <= end0pos; ++i) {}
-      var nrzeroes = i - startpos;
+      let nrzeroes = i - startpos;
       if (nrzeroes >= I16) {
         lng = nrzeroes >> 4;
         for (let nrmarker = 1; nrmarker <= lng; ++nrmarker) writeBits(M16zeroes);
@@ -291,8 +291,8 @@ function JPEGEncoder(this: any, quality: number = 50) {
   }
 
   function initCharLookupTable() {
-    var sfcc = String.fromCharCode;
-    for (var i = 0; i < 256; i++) {
+    const sfcc = String.fromCharCode;
+    for (let i = 0; i < 256; i++) {
       ///// ACHTUNG // 255
       clt[i] = sfcc(i);
     }
@@ -300,7 +300,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
 
   this.encode = (image: IRgbaImage, quality?: number) => {
     // image data object
-    var time_start = new Date().getTime();
+    const time_start = new Date().getTime();
 
     if (quality) setQuality(quality);
 
@@ -318,21 +318,21 @@ function JPEGEncoder(this: any, quality: number = 50) {
     writeSOSWrapper();
 
     // Encode 8x8 macroblocks
-    var DCY = 0;
-    var DCU = 0;
-    var DCV = 0;
+    let DCY = 0;
+    let DCU = 0;
+    let DCV = 0;
 
-    var imageData = image.data;
-    var width = image.width;
-    var height = image.height;
+    const imageData = image.data;
+    const width = image.width;
+    const height = image.height;
 
-    var quadWidth = width * 4;
-    var tripleWidth = width * 3;
+    const quadWidth = width * 4;
+    const tripleWidth = width * 3;
 
-    var x,
+    let x,
       y = 0;
-    var r, g, b;
-    var start, p, col, row, pos;
+    let r, g, b;
+    let start, p, col, row, pos;
     while (y < height) {
       x = 0;
       while (x < quadWidth) {
@@ -392,7 +392,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
     if (typeof module === 'undefined') return new Uint8Array(bitWriter.getData());
     return Buffer.from(bitWriter.getData());
 
-    var jpegDataUri = 'data:image/jpeg;base64,' + btoaFn(bitWriter.getData());
+    const jpegDataUri = 'data:image/jpeg;base64,' + btoaFn(bitWriter.getData());
 
     bitWriter.reset();
 
@@ -501,22 +501,22 @@ function JPEGEncoder(this: any, quality: number = 50) {
     // that our non-interleaved encoding loop still produces the expected
     // number of MCUs for the declared sampling factors (1×1 per component).
     function upsampleComponent(comp) {
-      var yBlocks = coefficientArrays[0].length;
-      var xBlocks = coefficientArrays[0][0].length;
-      var cy = comp.length;
-      var cx = comp[0].length;
+      const yBlocks = coefficientArrays[0].length;
+      const xBlocks = coefficientArrays[0][0].length;
+      const cy = comp.length;
+      const cx = comp[0].length;
       if (cy === yBlocks && cx === xBlocks) return comp; // already same size
 
-      var factorY = Math.round(yBlocks / cy);
-      var factorX = Math.round(xBlocks / cx);
+      const factorY = Math.round(yBlocks / cy);
+      const factorX = Math.round(xBlocks / cx);
       if (factorY < 1 || factorX < 1) return comp; // unexpected, skip
 
-      var up = new Array(yBlocks);
-      for (var y = 0; y < yBlocks; y++) {
+      const up = new Array(yBlocks);
+      for (let y = 0; y < yBlocks; y++) {
         up[y] = new Array(xBlocks);
-        var srcRow = Math.floor(y / factorY);
-        for (var x = 0; x < xBlocks; x++) {
-          var srcCol = Math.floor(x / factorX);
+        const srcRow = Math.floor(y / factorY);
+        for (let x = 0; x < xBlocks; x++) {
+          const srcCol = Math.floor(x / factorX);
           up[y][x] = comp[srcRow][srcCol];
         }
       }
@@ -530,7 +530,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
     // The rest of the original function remains unchanged except that
     // we now reference `coefficientArrays` instead of the old name.
     //-------------------------------------------------------------------
-    var time_start = new Date().getTime();
+    const time_start = new Date().getTime();
 
     const qu = quality || 50;
     setQuality(qu);
@@ -576,24 +576,24 @@ function JPEGEncoder(this: any, quality: number = 50) {
     // ---------------------------------------------------------------------------
     // Encode the provided (already-quantised) DCT coefficient blocks directly.
     // ---------------------------------------------------------------------------
-    var YDC = 0;
-    var CbDC = 0;
-    var CrDC = 0;
+    let YDC = 0;
+    let CbDC = 0;
+    let CrDC = 0;
 
-    var Yheight = coefficientArrays[0].length;
-    var Ywidth = coefficientArrays[0][0].length;
+    const Yheight = coefficientArrays[0].length;
+    const Ywidth = coefficientArrays[0][0].length;
 
-    for (var y = 0; y < Yheight; y++) {
-      for (var x = 0; x < Ywidth; x++) {
+    for (let y = 0; y < Yheight; y++) {
+      for (let x = 0; x < Ywidth; x++) {
         // Luminance block
-        var ydu = coefficientArrays[0][y][x];
+        const ydu = coefficientArrays[0][y][x];
         YDC = processDUFromCoefficients(ydu, YDC, YDC_HT, YAC_HT);
 
         // Corresponding chroma blocks (thanks to upsampling they are same indices)
-        var cbdu = coefficientArrays[1][y][x];
+        const cbdu = coefficientArrays[1][y][x];
         CbDC = processDUFromCoefficients(cbdu, CbDC, UVDC_HT, UVAC_HT);
 
-        var crdu = coefficientArrays[2][y][x];
+        const crdu = coefficientArrays[2][y][x];
         CrDC = processDUFromCoefficients(crdu, CrDC, UVDC_HT, UVAC_HT);
       }
     }
@@ -607,7 +607,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
 
     writeWord(0xffd9); // EOI
 
-    var jpegData = bitWriter.getData();
+    const jpegData = bitWriter.getData();
     bitWriter.reset();
 
     return jpegData;
@@ -623,7 +623,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
 
     if (currentQuality == quality) return; // don't recalc if unchanged
 
-    var sf = 0;
+    let sf = 0;
     if (quality < 50) {
       sf = Math.floor(5000 / quality);
     } else {
@@ -636,7 +636,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
   }
 
   function init() {
-    var time_start = new Date().getTime();
+    const time_start = new Date().getTime();
     if (!quality) quality = 50;
     // Create tables
     initCharLookupTable();
