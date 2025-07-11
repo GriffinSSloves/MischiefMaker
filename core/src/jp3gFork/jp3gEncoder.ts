@@ -37,6 +37,11 @@ JPEG encoder ported to JavaScript and optimized by Andreas Ritter, www.bytestrom
 Basic GUI blocking jpeg encoder
 */
 
+// ---------------------------------------------------------------------------
+// Fork modifications © 2025 MischiefMaker contributors
+// – Steganography extensions, TypeScript migration scaffolding and API tweaks
+// ---------------------------------------------------------------------------
+
 import { ZIG_ZAG } from './constants';
 import {
   STD_DC_LUMINANCE_NRCODES,
@@ -49,7 +54,7 @@ import {
   STD_AC_CHROMINANCE_VALUES,
 } from './huffmanConstants';
 import { Y_LUMA_QT_BASE, UV_CHROMA_QT_BASE, AA_SF } from './quantTables';
-import { computeHuffmanTable } from './huffmanUtils';
+import { computeHuffmanTable, HuffmanTable } from './huffmanUtils';
 import { buildCategoryAndBitcode } from './bitcodeUtils';
 import { getHuffmanFrequencies } from './huffmanFrequency';
 import { buildRgbYuvLookupTable } from './colorTables';
@@ -73,52 +78,58 @@ var btoa =
     return Buffer.from(buf).toString('base64');
   };
 
-function JPEGEncoder(quality) {
-  var self = this;
-  var YTable = new Array(64);
-  var UVTable = new Array(64);
-  var fdtbl_Y = new Array(64);
-  var fdtbl_UV = new Array(64);
-  var YDC_HT;
-  var UVDC_HT;
-  var YAC_HT;
-  var UVAC_HT;
+function JPEGEncoder(quality: number = 50) {
+  // -------------------------------------------------------------------------
+  // Internal state (typed)
+  // -------------------------------------------------------------------------
+  let YTable: number[] = new Array(64);
+  let UVTable: number[] = new Array(64);
+  let fdtbl_Y: number[] = new Array(64);
+  let fdtbl_UV: number[] = new Array(64);
 
-  var bitcode = new Array(65535);
-  var category = new Array(65535);
-  var outputfDCTQuant = new Array(64);
-  var DU = new Array(64);
+  // Huffman tables: index = symbol, value = [code, length]
+  let YDC_HT: HuffmanTable | undefined;
+  let UVDC_HT: HuffmanTable | undefined;
+  let YAC_HT: HuffmanTable | undefined;
+  let UVAC_HT: HuffmanTable | undefined;
 
+  // Category / bitcode lookup (index = 32767 + signed value)
+  let category: number[] = new Array(65535);
+  let bitcode: Array<[number, number]> = new Array(65535) as Array<[number, number]>;
+
+  // Working buffers
   const bitWriter = new BitWriter();
+  const DU: number[] = new Array(64);
+  const YDU: number[] = new Array(64);
+  const UDU: number[] = new Array(64);
+  const VDU: number[] = new Array(64);
+  const clt: string[] = new Array(256);
+  let RGB_YUV_TABLE: number[] = new Array(2048);
 
-  var YDU = new Array(64);
-  var UDU = new Array(64);
-  var VDU = new Array(64);
-  var clt = new Array(256);
-  var RGB_YUV_TABLE = new Array(2048);
-  var currentQuality;
+  let currentQuality: number;
 
-  var ZigZag = ZIG_ZAG;
+  const ZigZag = ZIG_ZAG;
 
-  var std_dc_luminance_nrcodes = Array.from(STD_DC_LUMINANCE_NRCODES);
-  var std_dc_luminance_values = Array.from(STD_DC_LUMINANCE_VALUES);
-  var std_ac_luminance_nrcodes = Array.from(STD_AC_LUMINANCE_NRCODES);
-  var std_ac_luminance_values = Array.from(STD_AC_LUMINANCE_VALUES);
+  // Local copies of the spec tables (so we can mutate them safely)
+  const std_dc_luminance_nrcodes = Array.from(STD_DC_LUMINANCE_NRCODES);
+  const std_dc_luminance_values = Array.from(STD_DC_LUMINANCE_VALUES);
+  const std_ac_luminance_nrcodes = Array.from(STD_AC_LUMINANCE_NRCODES);
+  const std_ac_luminance_values = Array.from(STD_AC_LUMINANCE_VALUES);
 
-  var std_dc_chrominance_nrcodes = Array.from(STD_DC_CHROMINANCE_NRCODES);
-  var std_dc_chrominance_values = Array.from(STD_DC_CHROMINANCE_VALUES);
-  var std_ac_chrominance_nrcodes = Array.from(STD_AC_CHROMINANCE_NRCODES);
-  var std_ac_chrominance_values = Array.from(STD_AC_CHROMINANCE_VALUES);
+  const std_dc_chrominance_nrcodes = Array.from(STD_DC_CHROMINANCE_NRCODES);
+  const std_dc_chrominance_values = Array.from(STD_DC_CHROMINANCE_VALUES);
+  const std_ac_chrominance_nrcodes = Array.from(STD_AC_CHROMINANCE_NRCODES);
+  const std_ac_chrominance_values = Array.from(STD_AC_CHROMINANCE_VALUES);
 
-  function initQuantTables(sf) {
+  function initQuantTables(sf: number) {
     const { YTable: yT, UVTable: uvT, fdtbl_Y: fdY, fdtbl_UV: fdUV } = buildQuantTables(sf);
-    YTable = yT as any;
-    UVTable = uvT as any;
-    fdtbl_Y = fdY as any;
-    fdtbl_UV = fdUV as any;
+    YTable = yT;
+    UVTable = uvT;
+    fdtbl_Y = fdY;
+    fdtbl_UV = fdUV;
   }
 
-  const computeHuffmanTbl = computeHuffmanTable as any;
+  const computeHuffmanTbl = computeHuffmanTable;
 
   function initHuffmanTbl() {
     YDC_HT = computeHuffmanTbl(std_dc_luminance_nrcodes, std_dc_luminance_values);
@@ -130,11 +141,11 @@ function JPEGEncoder(quality) {
   function initCategoryNumber() {
     const { category: catTbl, bitcode: bcTbl } = buildCategoryAndBitcode();
     category = catTbl;
-    bitcode = bcTbl as any;
+    bitcode = bcTbl;
   }
 
   function initRGBYUVTable() {
-    RGB_YUV_TABLE = buildRgbYuvLookupTable() as any;
+    RGB_YUV_TABLE = buildRgbYuvLookupTable();
   }
 
   // IO functions
@@ -640,16 +651,66 @@ if (typeof module !== 'undefined') {
   window['jpeg-js'].encode = encode;
 }
 
-function encode(imgData, qu) {
-  if (typeof qu === 'undefined') qu = 50;
-  var encoder = new JPEGEncoder(qu);
-  var data = encoder.encode(imgData, qu);
-  return {
-    data: data,
-    width: imgData.width,
-    height: imgData.height,
-  };
-}
-
 // FORK MODIFICATION: Export the encoder for use in our steganography client
 export { JPEGEncoder };
+
+// ---------------------------------------------------------------------------
+// Public TypeScript interfaces (initial scaffold – will be refined gradually)
+// ---------------------------------------------------------------------------
+
+/** Raw RGBA image buffer expected by `encode()`. */
+export interface IRgbaImage {
+  width: number;
+  height: number;
+  /** Flat RGBA byte array – length === width * height * 4. */
+  data: Uint8Array;
+  /** Optional JPEG comment strings to embed (one COM segment per entry). */
+  comments?: string[];
+  /** Optional EXIF payload (already includes the "Exif\0" leader if present). */
+  exifBuffer?: Uint8Array | null;
+}
+
+/** Optional metadata object accepted by `encodeFromDCT()`. */
+export interface IEncodeMetadata {
+  width: number;
+  height: number;
+  /** Luma and (optionally) Chroma quant tables, 64 entries each. */
+  quantizationTables?: [number[] /* Y */, number[] /* Cb/Cr */?];
+  /** Horizontal sampling factor for Cb/Cr relative to Y (e.g. 2 for 4:2:0). */
+  hSampRatio?: number;
+  /** Vertical sampling factor for Cb/Cr relative to Y. */
+  vSampRatio?: number;
+  comments?: string[];
+  exif?: Uint8Array | null;
+}
+
+/** A single 8×8 quantised DCT block (length-64 array). */
+export type QuantBlock = number[] & { length: 64 };
+/** 2-D matrix of blocks for one component (rows × columns). */
+export type ComponentBlocks = QuantBlock[][];
+/** Tuple in Y, Cb, Cr order used by encodeFromDCT(). */
+export type QuantizedComponents = [ComponentBlocks, ComponentBlocks, ComponentBlocks];
+
+/** Minimal public API contract for our (legacy) encoder constructor. */
+export interface IJpegEncoder {
+  encode(image: IRgbaImage, quality?: number): Uint8Array | Buffer;
+  encodeFromDCT(
+    blocks: QuantizedComponents | { components: unknown[] },
+    metadata?: Partial<IEncodeMetadata>,
+    quality?: number
+  ): Uint8Array | Buffer;
+}
+
+// ---------------------------------------------------------------------------
+// Back-compat helper: simple one-shot encoder mirroring original jpeg-js API
+// ---------------------------------------------------------------------------
+
+function encode(imgData: IRgbaImage, qu: number = 50) {
+  const encoder = new JPEGEncoder(qu);
+  const data = encoder.encode(imgData, qu);
+  return {
+    data,
+    width: imgData.width,
+    height: imgData.height,
+  } as const;
+}
