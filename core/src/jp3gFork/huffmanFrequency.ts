@@ -1,5 +1,18 @@
 import { buildCategoryAndBitcode } from './bitcodeUtils';
 
+// ---------------------------------------------------------------------------
+// Type definitions
+// ---------------------------------------------------------------------------
+
+/** A single 8×8 quantised DCT block (length-64 array). */
+export type QuantBlock = number[] & { length: 64 };
+
+/** 2-D matrix of blocks for one component (rows × columns). */
+export type ComponentBlocks = QuantBlock[][];
+
+/** Y, Cb, Cr components in that order. */
+export type QuantizedComponents = [ComponentBlocks, ComponentBlocks, ComponentBlocks];
+
 export interface IFrequencyTables {
   Y_DC_freq: number[];
   Y_AC_freq: number[];
@@ -13,7 +26,7 @@ export interface IFrequencyTables {
  * an image.  The input must be an array `[Y, Cb, Cr]`, where each component is
  * a 2-D array of 8×8 blocks already quantised.
  */
-export function getHuffmanFrequencies(quantizedComponents: any[][][]): IFrequencyTables {
+export function getHuffmanFrequencies(quantizedComponents: QuantizedComponents): IFrequencyTables {
   const { category } = buildCategoryAndBitcode();
 
   const Y_DC_freq = new Array(256).fill(0);
@@ -25,9 +38,7 @@ export function getHuffmanFrequencies(quantizedComponents: any[][][]): IFrequenc
     lastDCU = 0,
     lastDCV = 0;
 
-  const component0 = quantizedComponents[0];
-  const component1 = quantizedComponents[1];
-  const component2 = quantizedComponents[2];
+  const [component0, component1, component2] = quantizedComponents;
 
   for (let blockRow = 0; blockRow < component0.length; blockRow++) {
     for (let blockCol = 0; blockCol < component0[0].length; blockCol++) {

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { getHuffmanFrequencies } from './huffmanFrequency';
+import { getHuffmanFrequencies, QuantizedComponents, QuantBlock } from './huffmanFrequency';
 
 // Helper to create a blank 8×8 block
-const blankBlock = () => new Array(64).fill(0);
+const blankBlock = (): QuantBlock => new Array(64).fill(0) as unknown as QuantBlock;
 
 describe('getHuffmanFrequencies', () => {
   it('returns correct DC counts for single-block image', () => {
@@ -16,7 +16,7 @@ describe('getHuffmanFrequencies', () => {
     const crBlock = blankBlock();
     crBlock[0] = 4; // Cr DC value
 
-    const components = [
+    const components: QuantizedComponents = [
       [[yBlock]], // Y
       [[cbBlock]], // Cb
       [[crBlock]], // Cr
@@ -32,7 +32,7 @@ describe('getHuffmanFrequencies', () => {
   });
 
   it('counts EOB symbol when all ACs are zero', () => {
-    const components = [[[blankBlock()]], [[blankBlock()]], [[blankBlock()]]];
+    const components: QuantizedComponents = [[[blankBlock()]], [[blankBlock()]], [[blankBlock()]]];
     const { Y_AC_freq, UV_AC_freq } = getHuffmanFrequencies(components);
     // For 1×1 block scenario: one Y block + two chroma blocks -> 3 EOBs
     expect(Y_AC_freq[0x00]).toBe(1);
