@@ -42,6 +42,7 @@ import { buildHuffmanTable as buildHuffmanTableUtil } from './utils/huffmanTable
 import { requestMemoryAllocation, resetMaxMemoryUsage, getBytesAllocated } from './utils/memoryManager';
 import { idctBlock } from './utils/idct';
 import { clampTo8bit } from './utils/math';
+import { buildComponentData as buildComponentDataUtil } from './utils/componentDataBuilder';
 
 const JpegImage = (function jpegImage() {
   'use strict';
@@ -350,35 +351,9 @@ const JpegImage = (function jpegImage() {
   }
 
   function buildComponentData(component) {
-    const lines = [];
-    const blocksPerLine = component.blocksPerLine;
-    const blocksPerColumn = component.blocksPerColumn;
-    const samplesPerLine = blocksPerLine << 3;
-    // Only r is needed now, since p is internal to idctBlock
-    const r = new Uint8Array(64);
-
-    requestMemoryAllocation(samplesPerLine * blocksPerColumn * 8);
-
-    let i, j;
-    for (let blockRow = 0; blockRow < blocksPerColumn; blockRow++) {
-      const scanLine = blockRow << 3;
-      for (i = 0; i < 8; i++) {
-        lines.push(new Uint8Array(samplesPerLine));
-      }
-      for (let blockCol = 0; blockCol < blocksPerLine; blockCol++) {
-        idctBlock(component.blocks[blockRow][blockCol], component.quantizationTable, r);
-
-        let offset = 0,
-          sample = blockCol << 3;
-        for (j = 0; j < 8; j++) {
-          const line = lines[scanLine + j];
-          for (i = 0; i < 8; i++) {
-            line[sample + i] = r[offset++];
-          }
-        }
-      }
-    }
-    return lines;
+    // Delegate to extracted utility for maintainability
+    // @ts-ignore – internal component shape is compatible
+    return buildComponentDataUtil(component);
   }
 
   constructor.prototype = {
