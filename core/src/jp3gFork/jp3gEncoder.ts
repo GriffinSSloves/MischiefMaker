@@ -49,13 +49,23 @@ import {
   STD_AC_CHROMINANCE_VALUES,
 } from './huffmanConstants';
 import { Y_LUMA_QT_BASE, UV_CHROMA_QT_BASE, AA_SF } from './quantTables';
-import { computeHuffmanTable, generateHuffmanNrcodesValues } from './huffmanUtils';
+import { computeHuffmanTable } from './huffmanUtils';
 import { buildCategoryAndBitcode } from './bitcodeUtils';
 import { getHuffmanFrequencies } from './huffmanFrequency';
 import { buildRgbYuvLookupTable } from './colorTables';
 import { buildQuantTables } from './quantUtils';
 import { fDCTQuant as dctQuant } from './dctUtils';
 import { BitWriter } from './BitWriter';
+import {
+  writeAPP0,
+  writeAPP1,
+  writeSOF0,
+  writeCOM,
+  writeSOS,
+  writeDQT as writeDQTHeader,
+  writeDHT as writeDHTHeader,
+  writeStandardDHT as writeStandardDHTHeader,
+} from './jpegHeaderWriters';
 
 var btoa =
   btoa ||
@@ -143,137 +153,16 @@ function JPEGEncoder(quality) {
   // DCT & quantization core – delegate to shared util
   const fDCTQuant = dctQuant;
 
-  function writeAPP0() {
-    writeWord(0xffe0); // marker
-    writeWord(16); // length
-    writeByte(0x4a); // J
-    writeByte(0x46); // F
-    writeByte(0x49); // I
-    writeByte(0x46); // F
-    writeByte(0); // = "JFIF",'\0'
-    writeByte(1); // versionhi
-    writeByte(1); // versionlo
-    writeByte(0); // xyunits
-    writeWord(1); // xdensity
-    writeWord(1); // ydensity
-    writeByte(0); // thumbnwidth
-    writeByte(0); // thumbnheight
-  }
+  // Local header writer wrappers now delegate to shared utilities.
+  const writeAPP0Wrapper = () => writeAPP0(bitWriter);
+  const writeAPP1Wrapper = buf => writeAPP1(bitWriter, buf);
+  const writeSOF0Wrapper = (w, h) => writeSOF0(bitWriter, w, h);
+  const writeCOMWrapper = c => writeCOM(bitWriter, c);
+  const writeSOSWrapper = () => writeSOS(bitWriter);
 
-  function writeAPP1(exifBuffer) {
-    if (!exifBuffer) return;
-
-    writeWord(0xffe1); // APP1 marker
-
-    if (exifBuffer[0] === 0x45 && exifBuffer[1] === 0x78 && exifBuffer[2] === 0x69 && exifBuffer[3] === 0x66) {
-      // Buffer already starts with EXIF, just use it directly
-      writeWord(exifBuffer.length + 2); // length is buffer + length itself!
-    } else {
-      // Buffer doesn't start with EXIF, write it for them
-      writeWord(exifBuffer.length + 5 + 2); // length is buffer + EXIF\0 + length itself!
-      writeByte(0x45); // E
-      writeByte(0x78); // X
-      writeByte(0x69); // I
-      writeByte(0x66); // F
-      writeByte(0); // = "EXIF",'\0'
-    }
-
-    for (var i = 0; i < exifBuffer.length; i++) {
-      writeByte(exifBuffer[i]);
-    }
-  }
-
-  function writeSOF0(width, height) {
-    writeWord(0xffc0); // marker
-    writeWord(17); // length, truecolor YUV JPG
-    writeByte(8); // precision
-    writeWord(height);
-    writeWord(width);
-    writeByte(3); // nrofcomponents
-    writeByte(1); // IdY
-    writeByte(0x11); // HVY
-    writeByte(0); // QTY
-    writeByte(2); // IdU
-    writeByte(0x11); // HVU
-    writeByte(1); // QTU
-    writeByte(3); // IdV
-    writeByte(0x11); // HVV
-    writeByte(1); // QTV
-  }
-
-  function writeDQT() {
-    writeWord(0xffdb); // marker
-    writeWord(132); // length
-    writeByte(0);
-    for (var i = 0; i < 64; i++) {
-      writeByte(YTable[i]);
-    }
-    writeByte(1);
-    for (var j = 0; j < 64; j++) {
-      writeByte(UVTable[j]);
-    }
-  }
-
-  function writeDHT() {
-    writeWord(0xffc4); // marker
-
-    // Generate nrcodes and values using shared utility
-    const YDC_huff = generateHuffmanNrcodesValues(YDC_HT);
-    const UVDC_huff = generateHuffmanNrcodesValues(UVDC_HT);
-    const YAC_huff = generateHuffmanNrcodesValues(YAC_HT);
-    const UVAC_huff = generateHuffmanNrcodesValues(UVAC_HT);
-
-    var totalLength = 2; // length field itself is counted later
-    totalLength += 1 + 16 + YDC_huff.values.length; // Y DC
-    totalLength += 1 + 16 + YAC_huff.values.length; // Y AC (class 1? Actually AC follows)
-    totalLength += 1 + 16 + UVDC_huff.values.length; // UV DC
-    totalLength += 1 + 16 + UVAC_huff.values.length; // UV AC
-
-    writeWord(totalLength);
-
-    writeByte(0); // HTYDCinfo
-    for (var i = 0; i < 16; i++) writeByte(YDC_huff.nrcodes[i]);
-    for (var i = 0; i < YDC_huff.values.length; i++) writeByte(YDC_huff.values[i]);
-
-    writeByte(0x10); // HTYACinfo
-    for (var i = 0; i < 16; i++) writeByte(YAC_huff.nrcodes[i]);
-    for (var i = 0; i < YAC_huff.values.length; i++) writeByte(YAC_huff.values[i]);
-
-    writeByte(1); // HTUDCinfo
-    for (var i = 0; i < 16; i++) writeByte(UVDC_huff.nrcodes[i]);
-    for (var i = 0; i < UVDC_huff.values.length; i++) writeByte(UVDC_huff.values[i]);
-
-    writeByte(0x11); // HTUACinfo
-    for (var i = 0; i < 16; i++) writeByte(UVAC_huff.nrcodes[i]);
-    for (var i = 0; i < UVAC_huff.values.length; i++) writeByte(UVAC_huff.values[i]);
-  }
-
-  function writeCOM(comments) {
-    if (typeof comments === 'undefined' || comments.constructor !== Array) return;
-    comments.forEach(e => {
-      if (typeof e !== 'string') return;
-      writeWord(0xfffe); // marker
-      var l = e.length;
-      writeWord(l + 2); // length itself as well
-      var i;
-      for (i = 0; i < l; i++) writeByte(e.charCodeAt(i));
-    });
-  }
-
-  function writeSOS() {
-    writeWord(0xffda); // SOS
-    writeWord(12); // length
-    writeByte(3); // nrofcomponents
-    writeByte(1); // IdY
-    writeByte(0); // HTY
-    writeByte(2); // IdU
-    writeByte(0x11); // HTU
-    writeByte(3); // IdV
-    writeByte(0x11); // HTV
-    writeByte(0); // Ss
-    writeByte(0x3f); // Se
-    writeByte(0); // Bf
-  }
+  const writeDQTWrapper = () => writeDQTHeader(bitWriter, YTable, UVTable);
+  const writeDHTWrapper = () => writeDHTHeader(bitWriter, YDC_HT, YAC_HT, UVDC_HT, UVAC_HT);
+  const writeStandardDHTWrapper = () => writeStandardDHTHeader(bitWriter);
 
   function processDUFromCoefficients(dctCoefficients, DC, HTDC, HTAC) {
     var EOB = HTAC[0x00];
@@ -403,13 +292,13 @@ function JPEGEncoder(quality) {
 
     // Add JPEG headers
     writeWord(0xffd8); // SOI
-    writeAPP0();
-    writeCOM(image.comments);
-    writeAPP1(image.exifBuffer);
-    writeDQT();
-    writeSOF0(image.width, image.height);
-    writeDHT();
-    writeSOS();
+    writeAPP0Wrapper();
+    writeCOMWrapper(image.comments);
+    writeAPP1Wrapper(image.exifBuffer);
+    writeDQTWrapper();
+    writeSOF0Wrapper(image.width, image.height);
+    writeDHTWrapper();
+    writeSOSWrapper();
 
     // Encode 8x8 macroblocks
     var DCY = 0;
@@ -632,12 +521,12 @@ function JPEGEncoder(quality) {
 
     // Header
     writeWord(0xffd8); // SOI
-    writeAPP0();
+    writeAPP0Wrapper();
     if (metadata.exif) {
-      writeAPP1(metadata.exif);
+      writeAPP1Wrapper(metadata.exif);
     }
     if (metadata.comments && metadata.comments.length > 0) {
-      writeCOM(metadata.comments);
+      writeCOMWrapper(metadata.comments);
     }
 
     // -- Quantisation tables -----------------------------------------------------
@@ -655,15 +544,15 @@ function JPEGEncoder(quality) {
       }
     }
     // Always write a DQT marker (either caller-supplied or default tables).
-    writeDQT();
+    writeDQTWrapper();
     // --
 
-    writeSOF0(metadata.width, metadata.height);
+    writeSOF0Wrapper(metadata.width, metadata.height);
 
     // Write baseline standard Huffman tables (Annex K.3)
-    writeStandardDHT();
+    writeStandardDHTWrapper();
 
-    writeSOS();
+    writeSOSWrapper();
 
     // ---------------------------------------------------------------------------
     // Encode the provided (already-quantised) DCT coefficient blocks directly.
@@ -739,29 +628,6 @@ function JPEGEncoder(quality) {
     initRGBYUVTable();
 
     setQuality(quality);
-  }
-
-  // FORK ADDITION: Write baseline standard Huffman tables (Annex K.3)
-  function writeStandardDHT() {
-    // Pre-computed length (0x01A2) covers 4 Huffman tables
-    writeWord(0xffc4);
-    writeWord(0x01a2);
-
-    // Helper to write a single table
-    function writeTable(nrcodes, values, tableClass, tableId) {
-      writeByte((tableClass << 4) | tableId);
-      for (var i = 1; i <= 16; i++) writeByte(nrcodes[i]);
-      for (var j = 0; j < values.length; j++) writeByte(values[j]);
-    }
-
-    // Luminance DC (class 0, id 0)
-    writeTable(std_dc_luminance_nrcodes, std_dc_luminance_values, 0, 0);
-    // Luminance AC (class 1, id 0)
-    writeTable(std_ac_luminance_nrcodes, std_ac_luminance_values, 1, 0);
-    // Chrominance DC (class 0, id 1)
-    writeTable(std_dc_chrominance_nrcodes, std_dc_chrominance_values, 0, 1);
-    // Chrominance AC (class 1, id 1)
-    writeTable(std_ac_chrominance_nrcodes, std_ac_chrominance_values, 1, 1);
   }
 
   init();
