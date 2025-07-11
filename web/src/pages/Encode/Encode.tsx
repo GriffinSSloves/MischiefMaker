@@ -90,7 +90,9 @@ export default function Encode() {
   };
 
   const handleDownload = () => {
-    if (!encodedImageUrl || !selectedFile) {return;}
+    if (!encodedImageUrl || !selectedFile) {
+      return;
+    }
 
     const link = document.createElement('a');
     link.href = encodedImageUrl;
