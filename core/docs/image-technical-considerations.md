@@ -160,73 +160,43 @@ function modifyCoefficient(coefficient: number, messageBit: number): number {
 
 ## Platform-Specific Implementation
 
-### **Web Platform - mozjpeg.js**
+### **Unified TypeScript Implementation – jp3g Fork**
 
-```typescript
-import { mozjpeg } from 'mozjpeg-js';
+All platforms (Node, browser via bundlers, and React Native) now use the **custom TypeScript jp3g fork** that lives in `core/src/jp3gFork`. It provides:
 
-class WebDCTProcessor implements IDCTProcessor {
-  async extractDCTCoefficients(jpeg: Buffer): Promise<DCTCoefficients> {
-    // Use mozjpeg.js to parse JPEG and extract DCT coefficients
-    const decoder = new mozjpeg.Decoder(jpeg);
-    const coefficients = decoder.getDCTCoefficients();
+- Full DCT coefficient access preserved via a `dctBlocks` property
+- Baseline-standard Huffman tables for re-encoding
+- Identical APIs for decoding and re-encoding across environments
 
-    return {
-      blocks: coefficients.blocks,
-      width: decoder.getWidth(),
-      height: decoder.getHeight(),
-      quality: decoder.getQuality(),
-      quantTables: decoder.getQuantTables(),
-    };
-  }
+The legacy platform-specific examples (mozjpeg.js, libjpeg-turbo, sharp) are kept below for historical reference and alternative integrations but are **not used in the current implementation**.
 
-  async rebuildJPEG(coefficients: DCTCoefficients): Promise<Buffer> {
-    const encoder = new mozjpeg.Encoder();
-    encoder.setDCTCoefficients(coefficients);
-    encoder.setQuality(coefficients.quality);
+### **Platform-Specific Libraries**
 
-    return encoder.encode();
-  }
-}
+**All platforms (default)**:
+
+```bash
+# Already included in the monorepo source – no external install required
 ```
 
-### **Mobile Platform - libjpeg-turbo**
+**Alternative / Legacy options:**
 
-```typescript
-import { NativeModules } from 'react-native';
+**Web:**
 
-class MobileDCTProcessor implements IDCTProcessor {
-  async extractDCTCoefficients(jpeg: Buffer): Promise<DCTCoefficients> {
-    // Use React Native bridge to native libjpeg-turbo
-    const coefficients = await NativeModules.JPEGProcessor.extractDCTCoefficients(jpeg);
-
-    return coefficients;
-  }
-
-  async rebuildJPEG(coefficients: DCTCoefficients): Promise<Buffer> {
-    return await NativeModules.JPEGProcessor.rebuildJPEG(coefficients);
-  }
-}
+```bash
+npm install mozjpeg-js
+npm install jpegjs
 ```
 
-### **Node.js Platform - Custom Integration**
+**Mobile (React Native):**
 
-```typescript
-import sharp from 'sharp';
-import { execSync } from 'child_process';
+```bash
+npm install react-native-jpeg-turbo
+```
 
-class NodeDCTProcessor implements IDCTProcessor {
-  async extractDCTCoefficients(jpeg: Buffer): Promise<DCTCoefficients> {
-    // Use custom Node.js module with libjpeg-turbo bindings
-    const coefficients = await extractDCTCoefficientsNative(jpeg);
+**Node.js:**
 
-    return coefficients;
-  }
-
-  async rebuildJPEG(coefficients: DCTCoefficients): Promise<Buffer> {
-    return await rebuildJPEGNative(coefficients);
-  }
-}
+```bash
+npm install sharp libjpeg-turbo-bindings
 ```
 
 ## Embedding Algorithm Implementation
@@ -436,11 +406,18 @@ function validateImageQuality(original: Buffer, modified: Buffer): QualityMetric
 
 ### **Platform-Specific Libraries**
 
+**All platforms (default)**:
+
+```bash
+# Already included in the monorepo source – no external install required
+```
+
+**Alternative / Legacy options:**
+
 **Web:**
 
 ```bash
 npm install mozjpeg-js
-# or
 npm install jpegjs
 ```
 
@@ -448,14 +425,12 @@ npm install jpegjs
 
 ```bash
 npm install react-native-jpeg-turbo
-# Custom native modules required
 ```
 
 **Node.js:**
 
 ```bash
-npm install sharp
-npm install libjpeg-turbo-bindings
+npm install sharp libjpeg-turbo-bindings
 ```
 
 ## Performance Considerations

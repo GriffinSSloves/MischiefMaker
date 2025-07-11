@@ -1,5 +1,16 @@
 # Current Tasks
 
+## HIGH PRIORITY – Visual Quality Polish
+
+The DCT-based jp3g fork pipeline is fully functional. The only remaining functional gap is **minor grittiness / slight colour-shift** visible in some re-encoded images.
+
+- Investigate quantization table reuse vs regeneration
+- Compare encoder output against original quant tables to minimise drift
+- Experiment with quality parameter vs coefficient rounding
+- Add snapshot-based visual regression test (PSNR / SSIM > 40 dB target)
+
+---
+
 ## CRITICAL ARCHITECTURE CHANGE - DCT Coefficient Steganography Required
 
 ### **Current Status: Pixel-Domain LSB Implementation Cannot Work**

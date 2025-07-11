@@ -91,14 +91,15 @@ After JPEG:     157 (LSB = 1) ❌ LSB flipped - message destroyed
 
 ```
 [Magic Signature: 32 bits]  # "MSCH" - MischiefMaker identifier
-[Version: 8 bits]           # Algorithm version
+[Version: 16 bits]           # Algorithm version (uint16)
 [Message Length: 32 bits]   # Payload size in bytes
-[Encoding Method: 8 bits]   # DCT coefficient method used
 [Checksum: 32 bits]         # CRC32 for error detection
+[Encoding Method: 8 bits]   # DCT coefficient method used
+[Reserved: 8 bits]          # Reserved for future use
 [Message: Variable]         # Actual secret message
 ```
 
-**Header Size**: 14 bytes (encoded in DCT coefficients)
+**Header Size**: 15 bytes (encoded in DCT coefficients)
 
 ## Messaging Service Compatibility
 
@@ -118,23 +119,14 @@ After JPEG:     157 (LSB = 1) ❌ LSB flipped - message destroyed
 
 ### **Required Libraries**
 
-**Web Platform:**
+All platforms now use a **custom TypeScript fork of jp3g** (see `core/src/jp3gFork`).
+This fork preserves DCT coefficients, provides re-encoding, and works in Node, Web (via bundlers), and React Native without native addons.
 
-- **mozjpeg.js** - JPEG parsing and DCT coefficient access
-- **jpegjs** - Alternative JPEG processing library
-- **Custom WASM** - For performance-critical operations
+**Alternative/Legacy options** (kept for reference):
 
-**Mobile Platform:**
-
-- **libjpeg-turbo** - Native JPEG processing
-- **React Native bindings** - Bridge to native libraries
-- **Platform-specific** - iOS/Android native implementations
-
-**Node.js Platform:**
-
-- **sharp** - High-performance image processing
-- **libjpeg-turbo** - Direct native bindings
-- **Custom modules** - For DCT coefficient access
+- mozjpeg.js / jpegjs (Web WASM)
+- libjpeg-turbo (mobile native)
+- sharp + libjpeg-turbo bindings (Node native)
 
 ### **Interface Definition**
 
@@ -228,7 +220,7 @@ async function decodeMessage(jpegImage: Buffer): Promise<string> {
 ```typescript
 const ALGORITHM_CONFIG = {
   MAGIC_SIGNATURE: 0x4d534348, // "MSCH"
-  CURRENT_VERSION: 2, // DCT coefficient version
+  CURRENT_VERSION: 1, // DCT coefficient version (matches HeaderUtility)
   ENCODING_METHOD: 'dct-ac', // DCT AC coefficient method
   MIN_COEFFICIENT_VALUE: 2, // Skip small coefficients
   MAX_COEFFICIENT_MODIFICATION: 1, // ±1 modification limit
