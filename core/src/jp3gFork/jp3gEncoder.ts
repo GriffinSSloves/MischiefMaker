@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 /*
   Copyright (c) 2008, Adobe Systems Incorporated
   All rights reserved.
@@ -53,10 +51,8 @@ import {
   STD_AC_CHROMINANCE_NRCODES,
   STD_AC_CHROMINANCE_VALUES,
 } from './huffmanConstants';
-import { Y_LUMA_QT_BASE, UV_CHROMA_QT_BASE, AA_SF } from './quantTables';
 import { computeHuffmanTable, HuffmanTable } from './huffmanUtils';
 import { buildCategoryAndBitcode } from './bitcodeUtils';
-import { getHuffmanFrequencies } from './huffmanFrequency';
 import { buildRgbYuvLookupTable } from './colorTables';
 import { buildQuantTables } from './quantUtils';
 import { fDCTQuant as dctQuant } from './dctUtils';
@@ -71,13 +67,18 @@ import {
   writeDHT as writeDHTHeader,
   writeStandardDHT as writeStandardDHTHeader,
 } from './jpegHeaderWriters';
+import { IRgbaImage, IEncodeMetadata, QuantizedComponents, ComponentBlocks, IJpegEncoder } from './types';
+import { Buffer } from 'buffer';
 
-// Polyfill for `btoa` to support Node environments – typed for TS strict mode
-const btoaFn: (buf: Uint8Array | number[]) => string =
-  (typeof globalThis !== 'undefined' && (globalThis as any).btoa) ||
-  ((buf: Uint8Array | number[]) => Buffer.from(buf).toString('base64'));
+// Helper interface describing a decoder component shape we care about
+interface IDecoderComponent {
+  dctBlocks: ComponentBlocks;
+  quantizationTable?: number[];
+  scaleX?: number;
+  scaleY?: number;
+}
 
-function JPEGEncoder(this: any, quality: number = 50) {
+function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) {
   // -------------------------------------------------------------------------
   // Internal state (typed)
   // -------------------------------------------------------------------------
@@ -152,10 +153,6 @@ function JPEGEncoder(this: any, quality: number = 50) {
     bitWriter.writeBits(bs);
   }
 
-  function writeByte(value: number): void {
-    bitWriter.writeByte(value);
-  }
-
   function writeWord(value: number): void {
     bitWriter.writeWord(value);
   }
@@ -208,7 +205,9 @@ function JPEGEncoder(this: any, quality: number = 50) {
 
     // Encode ACs
     let end0pos = 63;
-    for (; end0pos > 0 && DU[end0pos] == 0; end0pos--) {}
+    while (end0pos > 0 && DU[end0pos] === 0) {
+      end0pos--;
+    }
 
     if (end0pos == 0) {
       writeBits(EOB);
@@ -219,7 +218,9 @@ function JPEGEncoder(this: any, quality: number = 50) {
     let lng;
     while (i <= end0pos) {
       const startpos = i;
-      for (; DU[i] == 0 && i <= end0pos; ++i) {}
+      while (DU[i] === 0 && i <= end0pos) {
+        i++;
+      }
       let nrzeroes = i - startpos;
       if (nrzeroes >= I16) {
         lng = nrzeroes >> 4;
@@ -261,8 +262,10 @@ function JPEGEncoder(this: any, quality: number = 50) {
       writeBits(bitcode[pos]);
     }
     //Encode ACs
-    let end0pos = 63; // was const... which is crazy
-    for (; end0pos > 0 && DU[end0pos] == 0; end0pos--) {}
+    let end0pos = 63;
+    while (end0pos > 0 && DU[end0pos] === 0) {
+      end0pos--;
+    }
     //end0pos = first element in reverse order !=0
     if (end0pos == 0) {
       writeBits(EOB);
@@ -272,7 +275,9 @@ function JPEGEncoder(this: any, quality: number = 50) {
     let lng;
     while (i <= end0pos) {
       const startpos = i;
-      for (; DU[i] == 0 && i <= end0pos; ++i) {}
+      while (DU[i] === 0 && i <= end0pos) {
+        i++;
+      }
       let nrzeroes = i - startpos;
       if (nrzeroes >= I16) {
         lng = nrzeroes >> 4;
@@ -299,8 +304,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
   }
 
   this.encode = (image: IRgbaImage, quality?: number) => {
-    // image data object
-    const time_start = new Date().getTime();
+    // image data object (timestamp removed – previously unused)
 
     if (quality) setQuality(quality);
 
@@ -327,7 +331,6 @@ function JPEGEncoder(this: any, quality: number = 50) {
     const height = image.height;
 
     const quadWidth = width * 4;
-    const tripleWidth = width * 3;
 
     let x,
       y = 0;
@@ -391,20 +394,14 @@ function JPEGEncoder(this: any, quality: number = 50) {
 
     if (typeof module === 'undefined') return new Uint8Array(bitWriter.getData());
     return Buffer.from(bitWriter.getData());
-
-    const jpegDataUri = 'data:image/jpeg;base64,' + btoaFn(bitWriter.getData());
-
-    bitWriter.reset();
-
-    return jpegDataUri;
   };
 
   // FORK MODIFICATION: Encode from DCT coefficients for steganography
   this.encodeFromDCT = (
-    dctInput: QuantizedComponents | { components: any[] },
+    blocks: QuantizedComponents | { components: unknown[] },
     metadataInput?: Partial<IEncodeMetadata>,
     quality?: number
-  ): Uint8Array => {
+  ): Uint8Array | Buffer => {
     // Normalize parameters so that the encoder works whether we receive raw
     // coefficient arrays or a full decoder-like object.
     // ------------------------------------------------------------------
@@ -421,12 +418,12 @@ function JPEGEncoder(this: any, quality: number = 50) {
 
     // The metadata object we ultimately use (may be the caller-supplied one or
     // a derived fallback).
-    let metadata: Partial<IEncodeMetadata & { components?: any[] }> = metadataInput || {};
+    let metadata: Partial<IEncodeMetadata & { components?: IDecoderComponent[] }> = metadataInput || {};
 
     // If the first argument looks like a decoder (has .components) rather than
     // an array, convert it into the structure the legacy code expects.
-    if (!Array.isArray(dctInput) && isDecoderLike(dctInput)) {
-      const decoderObj = dctInput;
+    if (!Array.isArray(blocks) && isDecoderLike(blocks)) {
+      const decoderObj = blocks;
 
       // --- Derive coefficient arrays ------------------------------------------------
       if (!decoderObj.components[0]?.dctBlocks) {
@@ -447,8 +444,8 @@ function JPEGEncoder(this: any, quality: number = 50) {
         height: decoderObj.height,
         // Quant tables – fall back to the tables found on each component.
         quantizationTables: [
-          decoderObj.components[0]?.quantizationTable,
-          decoderObj.components[1]?.quantizationTable || decoderObj.components[0]?.quantizationTable,
+          decoderObj.components[0].quantizationTable as number[],
+          (decoderObj.components[1]?.quantizationTable || decoderObj.components[0].quantizationTable) as number[],
         ],
         // Sampling ratios – infer from chroma component scales (assume 4:2:0 if undefined).
         hSampRatio: decoderObj.components[1] ? Math.round(1 / (decoderObj.components[1].scaleX || 1)) : 1,
@@ -459,20 +456,23 @@ function JPEGEncoder(this: any, quality: number = 50) {
       };
     } else {
       // Caller passed raw coefficient arrays (assumed already validated)
-      coefficientArrays = dctInput as QuantizedComponents;
+      coefficientArrays = blocks as QuantizedComponents;
       metadata = { ...metadataInput };
     }
 
     // --- Fallback: derive quant tables from metadataInput components if still missing ---
     if (
-      (!metadata.quantizationTables || metadata.quantizationTables.length === 0 || !metadata.quantizationTables[0]) &&
-      (metadata as any).components
+      (!metadata.quantizationTables || !metadata.quantizationTables[0]) &&
+      metadata.components &&
+      Array.isArray(metadata.components)
     ) {
-      const comps = (metadata as any).components as any[];
-      metadata.quantizationTables = [
-        comps[0]?.quantizationTable,
-        comps[1]?.quantizationTable || comps[0]?.quantizationTable,
-      ];
+      const comps = metadata.components as IDecoderComponent[];
+      if (comps.length > 0 && comps[0]?.quantizationTable) {
+        metadata.quantizationTables = [
+          comps[0].quantizationTable as number[],
+          (comps[1]?.quantizationTable || comps[0].quantizationTable) as number[],
+        ];
+      }
     }
 
     // ------------------------------------------------------------------
@@ -500,7 +500,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
     // blocks), duplicate each block to create a simple 4:4:4 representation so
     // that our non-interleaved encoding loop still produces the expected
     // number of MCUs for the declared sampling factors (1×1 per component).
-    function upsampleComponent(comp) {
+    function upsampleComponent(comp: ComponentBlocks): ComponentBlocks {
       const yBlocks = coefficientArrays[0].length;
       const xBlocks = coefficientArrays[0][0].length;
       const cy = comp.length;
@@ -511,11 +511,10 @@ function JPEGEncoder(this: any, quality: number = 50) {
       const factorX = Math.round(xBlocks / cx);
       if (factorY < 1 || factorX < 1) return comp; // unexpected, skip
 
-      const up = new Array(yBlocks);
+      const up: ComponentBlocks = Array.from({ length: yBlocks }, () => new Array(xBlocks) as ComponentBlocks[number]);
       for (let y = 0; y < yBlocks; y++) {
-        up[y] = new Array(xBlocks);
-        const srcRow = Math.floor(y / factorY);
         for (let x = 0; x < xBlocks; x++) {
+          const srcRow = Math.floor(y / factorY);
           const srcCol = Math.floor(x / factorX);
           up[y][x] = comp[srcRow][srcCol];
         }
@@ -530,7 +529,6 @@ function JPEGEncoder(this: any, quality: number = 50) {
     // The rest of the original function remains unchanged except that
     // we now reference `coefficientArrays` instead of the old name.
     //-------------------------------------------------------------------
-    const time_start = new Date().getTime();
 
     const qu = quality || 50;
     setQuality(qu);
@@ -557,9 +555,11 @@ function JPEGEncoder(this: any, quality: number = 50) {
       if (!metadata.quantizationTables[1]) {
         metadata.quantizationTables[1] = metadata.quantizationTables[0];
       }
+
+      const [qtY, qtC] = metadata.quantizationTables as [number[], number[]];
       for (let i = 0; i < 64; i++) {
-        YTable[i] = metadata.quantizationTables[0][i];
-        UVTable[i] = metadata.quantizationTables[1][i];
+        YTable[i] = qtY[i];
+        UVTable[i] = qtC[i];
       }
     }
     // Always write a DQT marker (either caller-supplied or default tables).
@@ -613,7 +613,7 @@ function JPEGEncoder(this: any, quality: number = 50) {
     return jpegData;
   };
 
-  function setQuality(quality) {
+  function setQuality(quality: number): void {
     if (quality <= 0) {
       quality = 1;
     }
@@ -636,7 +636,6 @@ function JPEGEncoder(this: any, quality: number = 50) {
   }
 
   function init() {
-    const time_start = new Date().getTime();
     if (!quality) quality = 50;
     // Create tables
     initCharLookupTable();
@@ -650,66 +649,44 @@ function JPEGEncoder(this: any, quality: number = 50) {
   init();
 }
 
-if (typeof module !== 'undefined') {
-  module.exports = encode;
-} else if (typeof window !== 'undefined') {
-  window['jpeg-js'] = window['jpeg-js'] || {};
-  window['jpeg-js'].encode = encode;
-}
-
-// FORK MODIFICATION: Export the encoder for use in our steganography client
-export { JPEGEncoder };
-
 // ---------------------------------------------------------------------------
-// Public TypeScript interfaces (initial scaffold – will be refined gradually)
+// Modern wrapper class with proper TypeScript surface
 // ---------------------------------------------------------------------------
 
-/** Raw RGBA image buffer expected by `encode()`. */
-export interface IRgbaImage {
-  width: number;
-  height: number;
-  /** Flat RGBA byte array – length === width * height * 4. */
-  data: Uint8Array;
-  /** Optional JPEG comment strings to embed (one COM segment per entry). */
-  comments?: string[];
-  /** Optional EXIF payload (already includes the "Exif\0" leader if present). */
-  exifBuffer?: Uint8Array | null;
-}
+type LegacyImpl = {
+  encode: (image: IRgbaImage, quality?: number) => Uint8Array | Buffer;
+  encodeFromDCT: (
+    blocks: QuantizedComponents | { components: unknown[] },
+    metadataInput?: Partial<IEncodeMetadata>,
+    quality?: number
+  ) => Uint8Array | Buffer;
+};
 
-/** Optional metadata object accepted by `encodeFromDCT()`. */
-export interface IEncodeMetadata {
-  width: number;
-  height: number;
-  /** Luma and (optionally) Chroma quant tables, 64 entries each. */
-  quantizationTables?: [number[] /* Y */, number[] /* Cb/Cr */?];
-  /** Horizontal sampling factor for Cb/Cr relative to Y (e.g. 2 for 4:2:0). */
-  hSampRatio?: number;
-  /** Vertical sampling factor for Cb/Cr relative to Y. */
-  vSampRatio?: number;
-  comments?: string[];
-  exif?: Uint8Array | null;
-}
+export class JPEGEncoder implements IJpegEncoder {
+  private readonly impl: LegacyImpl;
 
-/** A single 8×8 quantised DCT block (length-64 array). */
-export type QuantBlock = number[] & { length: 64 };
-/** 2-D matrix of blocks for one component (rows × columns). */
-export type ComponentBlocks = QuantBlock[][];
-/** Tuple in Y, Cb, Cr order used by encodeFromDCT(). */
-export type QuantizedComponents = [ComponentBlocks, ComponentBlocks, ComponentBlocks];
+  constructor(quality: number = 50) {
+    // Cast constructor to satisfy TS without using `any`
+    const LegacyCtor = LegacyJPEGEncoder as unknown as new (quality: number) => LegacyImpl;
+    this.impl = new LegacyCtor(quality);
+  }
 
-/** Minimal public API contract for our (legacy) encoder constructor. */
-export interface IJpegEncoder {
-  encode(image: IRgbaImage, quality?: number): Uint8Array | Buffer;
+  encode(image: IRgbaImage, quality?: number): Uint8Array | Buffer {
+    return this.impl.encode(image, quality);
+  }
+
   encodeFromDCT(
     blocks: QuantizedComponents | { components: unknown[] },
-    metadata?: Partial<IEncodeMetadata>,
+    metadataInput?: Partial<IEncodeMetadata>,
     quality?: number
-  ): Uint8Array | Buffer;
+  ): Uint8Array | Buffer {
+    return this.impl.encodeFromDCT(blocks, metadataInput, quality);
+  }
 }
 
 // Internal helper type for a jp3g decoder-like object we might receive.
 interface IDecoderLike {
-  components: any[];
+  components: IDecoderComponent[];
   width: number;
   height: number;
   comments?: string[];
@@ -717,21 +694,16 @@ interface IDecoderLike {
 }
 
 function isDecoderLike(obj: unknown): obj is IDecoderLike {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'components' in obj &&
-    Array.isArray((obj as any).components) &&
-    typeof (obj as any).width === 'number' &&
-    typeof (obj as any).height === 'number'
-  );
+  if (typeof obj !== 'object' || obj === null) return false;
+  const dec = obj as Partial<IDecoderLike>;
+  return Array.isArray(dec.components) && typeof dec.width === 'number' && typeof dec.height === 'number';
 }
 
 // ---------------------------------------------------------------------------
 // Back-compat helper: simple one-shot encoder mirroring original jpeg-js API
 // ---------------------------------------------------------------------------
 
-function encode(imgData: IRgbaImage, qu: number = 50) {
+export function encode(imgData: IRgbaImage, qu: number = 50) {
   const encoder = new JPEGEncoder(qu);
   const data = encoder.encode(imgData, qu);
   return {
