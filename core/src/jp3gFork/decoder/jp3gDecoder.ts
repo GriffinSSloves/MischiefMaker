@@ -26,24 +26,10 @@
 //   in PostScript Level 2, Technical Note #5116
 //   (partners.adobe.com/public/developer/en/ps/sdk/5116.DCT_Filter.pdf)
 
-import {
-  DCT_ZIG_ZAG as dctZigZag,
-  DCT_COS1 as dctCos1,
-  DCT_SIN1 as dctSin1,
-  DCT_COS3 as dctCos3,
-  DCT_SIN3 as dctSin3,
-  DCT_COS6 as dctCos6,
-  DCT_SIN6 as dctSin6,
-  DCT_SQRT2 as dctSqrt2,
-  DCT_SQRT1D2 as dctSqrt1d2,
-} from '../constants/decoderConstants';
-
 import { requestMemoryAllocation, resetMaxMemoryUsage, getBytesAllocated } from './utils/memoryManager';
 import { buildComponentData as buildComponentDataUtil } from './utils/componentDataBuilder';
-import { createHuffmanDecoders, type IHuffmanContext, type IScanComponent } from './utils/huffmanDecoders';
-import { buildHuffmanTable as buildHuffmanTableUtil, type HuffmanDecodeTree } from './utils/huffmanTable';
-import { idctBlock } from './utils/idct';
-import { clampTo8bit } from './utils/math';
+import { createHuffmanDecoders, type IScanComponent } from './utils/huffmanDecoders';
+import { type HuffmanDecodeTree } from './utils/huffmanTable';
 import {
   parseAPP0,
   parseAPP1,
@@ -180,9 +166,12 @@ const JpegImage = (function jpegImage() {
       return bitsData >>> 7;
     }
     function decodeHuffman(tree: HuffmanDecodeTree): number {
-      let node = tree;
+      let node: number | HuffmanDecodeTree = tree;
       let bit: number | null;
       while ((bit = readBit()) !== null) {
+        if (typeof node === 'number') {
+          throw new Error('invalid huffman sequence - already at leaf node');
+        }
         node = node[bit];
         if (typeof node === 'number') {
           return node;
@@ -228,6 +217,9 @@ const JpegImage = (function jpegImage() {
       });
 
     function decodeMcu(component: ExtendedScanComponent, decode: any, mcu: number, row: number, col: number): void {
+      if (!mcusPerLine) {
+        throw new Error('mcusPerLine not initialized');
+      }
       const mcuRow = (mcu / mcusPerLine) | 0;
       const mcuCol = mcu % mcusPerLine;
       const blockRow = mcuRow * component.v + row;
@@ -267,6 +259,9 @@ const JpegImage = (function jpegImage() {
     if (componentsLength == 1) {
       mcuExpected = components[0].blocksPerLine * components[0].blocksPerColumn;
     } else {
+      if (!mcusPerLine || !frame.mcusPerColumn) {
+        throw new Error('mcusPerLine or mcusPerColumn not initialized');
+      }
       mcuExpected = mcusPerLine * frame.mcusPerColumn;
     }
     if (!resetInterval) {
@@ -348,18 +343,18 @@ const JpegImage = (function jpegImage() {
       const xhr = new XMLHttpRequest();
       xhr.open('GET', path, true);
       xhr.responseType = 'arraybuffer';
-      xhr.onload = function () {
+      xhr.onload = function (this: JpegDecoder) {
         // TODO catch parse error
-        const data = new Uint8Array(xhr.response || xhr.mozResponseArrayBuffer);
+        const data = new Uint8Array(xhr.response || (xhr as any).mozResponseArrayBuffer);
         this.parse(data);
-        if (this.onload) {
-          this.onload();
+        if ((this as any).onload) {
+          (this as any).onload();
         }
       }.bind(this);
       xhr.send(null);
     },
     parse: function parse(this: JpegDecoder, data: Uint8Array): void {
-      const maxResolutionInPixels = this.opts.maxResolutionInMP * 1000 * 1000;
+      const maxResolutionInPixels = this.opts!.maxResolutionInMP! * 1000 * 1000;
       let offset = 0;
 
       // Create context for marker parsing
@@ -465,7 +460,8 @@ const JpegImage = (function jpegImage() {
           case 0xffed: // APP13
           case 0xffee: // APP14
           case 0xffef: // APP15
-          case 0xfffe: { // COM (Comment)
+          case 0xfffe: {
+            // COM (Comment)
             ctx.offset = offset;
             const appData = readDataBlock(ctx);
             updateOffset();
@@ -498,7 +494,8 @@ const JpegImage = (function jpegImage() {
             break;
           }
 
-          case 0xffdb: { // DQT (Define Quantization Tables)
+          case 0xffdb: {
+            // DQT (Define Quantization Tables)
             ctx.offset = offset;
             const dqtResult = parseDQT(ctx);
             updateOffset();
@@ -514,7 +511,8 @@ const JpegImage = (function jpegImage() {
 
           case 0xffc0: // SOF0 (Start of Frame, Baseline DCT)
           case 0xffc1: // SOF1 (Start of Frame, Extended DCT)
-          case 0xffc2: { // SOF2 (Start of Frame, Progressive DCT)
+          case 0xffc2: {
+            // SOF2 (Start of Frame, Progressive DCT)
             ctx.offset = offset;
             const sofResult = parseSOF(ctx, fileMarker);
             updateOffset();
@@ -524,7 +522,8 @@ const JpegImage = (function jpegImage() {
             break;
           }
 
-          case 0xffc4: { // DHT (Define Huffman Tables)
+          case 0xffc4: {
+            // DHT (Define Huffman Tables)
             ctx.offset = offset;
             const dhtResult = parseDHT(ctx);
             updateOffset();
@@ -532,18 +531,19 @@ const JpegImage = (function jpegImage() {
             // Merge the parsed tables into our huffman arrays
             for (let tableIndex = 0; tableIndex < dhtResult.data.huffmanTablesAC.length; tableIndex++) {
               if (dhtResult.data.huffmanTablesAC[tableIndex]) {
-                huffmanTablesAC[tableIndex] = dhtResult.data.huffmanTablesAC[tableIndex];
+                huffmanTablesAC[tableIndex] = dhtResult.data.huffmanTablesAC[tableIndex] as HuffmanDecodeTree;
               }
             }
             for (let tableIndex = 0; tableIndex < dhtResult.data.huffmanTablesDC.length; tableIndex++) {
               if (dhtResult.data.huffmanTablesDC[tableIndex]) {
-                huffmanTablesDC[tableIndex] = dhtResult.data.huffmanTablesDC[tableIndex];
+                huffmanTablesDC[tableIndex] = dhtResult.data.huffmanTablesDC[tableIndex] as HuffmanDecodeTree;
               }
             }
             break;
           }
 
-          case 0xffdd: { // DRI (Define Restart Interval)
+          case 0xffdd: {
+            // DRI (Define Restart Interval)
             ctx.offset = offset;
             const driResult = parseDRI(ctx);
             updateOffset();
@@ -551,7 +551,8 @@ const JpegImage = (function jpegImage() {
             break;
           }
 
-          case 0xffdc: { // Number of Lines marker
+          case 0xffdc: {
+            // Number of Lines marker
             ctx.offset = offset;
             parseDNL(ctx);
             updateOffset();
@@ -559,7 +560,8 @@ const JpegImage = (function jpegImage() {
             break;
           }
 
-          case 0xffda: { // SOS (Start of Scan)
+          case 0xffda: {
+            // SOS (Start of Scan)
             if (!frame) {
               throw new Error('frame not found before SOS marker');
             }
@@ -576,8 +578,13 @@ const JpegImage = (function jpegImage() {
               const componentId = componentSelectors[i * 2];
               const tableSpec = componentSelectors[i * 2 + 1];
               const component = frame.components[componentId] as ExtendedScanComponent;
-              component.huffmanTableDC = huffmanTablesDC[tableSpec >> 4];
-              component.huffmanTableAC = huffmanTablesAC[tableSpec & 15];
+              const dcTable = huffmanTablesDC[tableSpec >> 4];
+              const acTable = huffmanTablesAC[tableSpec & 15];
+              if (!dcTable || !acTable) {
+                throw new Error(`Missing huffman table: DC=${tableSpec >> 4}, AC=${tableSpec & 15}`);
+              }
+              component.huffmanTableDC = dcTable;
+              component.huffmanTableAC = acTable;
               components.push(component);
             }
             const processed = decodeScan(
@@ -642,8 +649,11 @@ const JpegImage = (function jpegImage() {
         const cp = frames[i].components;
         for (const j in cp) {
           if (Object.prototype.hasOwnProperty.call(cp, j)) {
-            cp[j].quantizationTable = quantizationTables[cp[j].quantizationIdx!];
-            cp[j].quantizationIdx = undefined;
+            const quantIdx = cp[j].quantizationIdx;
+            if (quantIdx !== undefined) {
+              cp[j].quantizationTable = quantizationTables[quantIdx];
+              delete (cp[j] as any).quantizationIdx;
+            }
           }
         }
       }
@@ -681,9 +691,9 @@ const JpegImage = (function jpegImage() {
         }
 
         this.components.push({
-          lines: buildComponentData(component),
-          scaleX: component.h / frame.maxH,
-          scaleY: component.v / frame.maxV,
+          lines: buildComponentData(component as any),
+          scaleX: component.h / frame.maxH!,
+          scaleY: component.v / frame.maxV!,
           // FORK MODIFICATION: Expose the preserved DCT coefficients
           dctBlocks: preservedBlocks,
           blocksPerLine: component.blocksPerLine,
@@ -699,7 +709,7 @@ const JpegImage = (function jpegImage() {
 
       // Convert decoder components to ColorComponent format
       const components: ColorComponent[] = this.components.map(comp => ({
-        lines: comp.lines,
+        lines: comp.lines as unknown as number[][],
         scaleX: comp.scaleX,
         scaleY: comp.scaleY,
       }));
@@ -711,7 +721,7 @@ const JpegImage = (function jpegImage() {
         scaleY,
         components,
         options: {
-          colorTransform: this.opts.colorTransform,
+          colorTransform: this.opts!.colorTransform,
           adobe: this.adobe,
         },
       };
@@ -724,7 +734,7 @@ const JpegImage = (function jpegImage() {
       formatAsRGBA?: boolean
     ): void {
       const data = this.getData(imageData.width, imageData.height);
-      copyToImageDataUtil(imageData, data, this.components.length, formatAsRGBA);
+      copyToImageDataUtil(imageData, data, this.components.length, formatAsRGBA ?? true);
     },
   };
 
@@ -768,9 +778,11 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
 
   const channels = opts.formatAsRGBA ? 4 : 3;
   const bytesNeeded = decoder.width * decoder.height * channels;
+  let image: DecodedImage;
+
   try {
     JpegImage.requestMemoryAllocation(bytesNeeded);
-    const image: DecodedImage = {
+    image = {
       width: decoder.width,
       height: decoder.height,
       exifBuffer: decoder.exifBuffer,
@@ -792,7 +804,7 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
     throw err;
   }
 
-  decoder.copyToImageData(image, opts.formatAsRGBA);
+  decoder.copyToImageData(image as any, opts.formatAsRGBA);
 
   return image;
 }
