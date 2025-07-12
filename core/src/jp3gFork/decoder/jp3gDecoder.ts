@@ -45,6 +45,7 @@ import {
   type JfifData,
   type AdobeData,
   type Frame,
+  type FrameComponent,
 } from './utils/markerParsers';
 import {
   convertColorSpace,
@@ -81,40 +82,11 @@ interface ExtendedFrame extends Frame {
 
 type DecodeFunction = (component: ExtendedScanComponent, block: Int32Array) => void;
 
-interface LegacyXMLHttpRequest extends XMLHttpRequest {
-  mozResponseArrayBuffer?: ArrayBuffer;
-}
-
 interface JpegImageConstructor {
   new (): JpegDecoder;
   resetMaxMemoryUsage: (limit: number) => void;
   getBytesAllocated: () => number;
   requestMemoryAllocation: (bytes: number) => void;
-}
-
-interface JP3GForkResult {
-  toObject(): {
-    width: number;
-    height: number;
-    components: DecoderComponent[];
-    jfif?: JfifData | null;
-    adobe?: AdobeData | null;
-    comments: string[];
-    _decoder: JpegDecoder;
-  };
-}
-
-interface FrameComponent {
-  h: number;
-  v: number;
-  quantizationIdx?: number;
-  quantizationTable?: Int32Array;
-  huffmanTableDC?: HuffmanDecodeTree;
-  huffmanTableAC?: HuffmanDecodeTree;
-  blocks?: Int32Array[][];
-  blocksPerLine?: number;
-  blocksPerColumn?: number;
-  pred?: number;
 }
 
 interface DecodedImage {
@@ -129,7 +101,8 @@ interface DecoderComponent {
   lines: Uint8Array[];
   scaleX: number;
   scaleY: number;
-  dctBlocks: Int32Array[][] | null;
+  dctBlocks?: number[][][]; // Match client expectation
+  blocks?: number[][][]; // Alternative blocks property for client
   blocksPerLine?: number;
   blocksPerColumn?: number;
   quantizationTable?: Int32Array;
@@ -239,7 +212,13 @@ const JpegImage = (function jpegImage() {
         successive,
       });
 
-    function decodeMcu(component: ExtendedScanComponent, decode: DecodeFunction, mcu: number, row: number, col: number): void {
+    function decodeMcu(
+      component: ExtendedScanComponent,
+      decode: DecodeFunction,
+      mcu: number,
+      row: number,
+      col: number
+    ): void {
       if (!mcusPerLine) {
         throw new Error('mcusPerLine not initialized');
       }
@@ -368,7 +347,9 @@ const JpegImage = (function jpegImage() {
       xhr.responseType = 'arraybuffer';
       xhr.onload = function (this: JpegDecoder) {
         // TODO catch parse error
-        const data = new Uint8Array(xhr.response || (xhr as LegacyXMLHttpRequest).mozResponseArrayBuffer);
+        const data = new Uint8Array(
+          xhr.response || (xhr as XMLHttpRequest & { mozResponseArrayBuffer?: ArrayBuffer }).mozResponseArrayBuffer
+        );
         this.parse(data);
         const callback = (this as JpegDecoder & { onload?: () => void }).onload;
         if (callback) {
@@ -676,7 +657,9 @@ const JpegImage = (function jpegImage() {
             const quantIdx = cp[j].quantizationIdx;
             if (quantIdx !== undefined) {
               cp[j].quantizationTable = quantizationTables[quantIdx];
-              delete (cp[j] as FrameComponent & { quantizationIdx?: number }).quantizationIdx;
+              // Remove the quantizationIdx property after copying to quantizationTable
+              const tempComponent = cp[j] as unknown as Record<string, unknown>;
+              tempComponent.quantizationIdx = undefined;
             }
           }
         }
@@ -691,23 +674,23 @@ const JpegImage = (function jpegImage() {
         const component = frame.components[frame.componentsOrder[i]];
 
         // FORK MODIFICATION: Preserve DCT coefficients before they're converted to pixels
-        let preservedBlocks = null;
+        let preservedBlocks: number[][][] | undefined = undefined;
         if (component.blocks) {
           // Deep copy the DCT coefficient blocks before buildComponentData processes them
           preservedBlocks = [];
           for (let blockRow = 0; blockRow < component.blocks.length; blockRow++) {
-            const rowCopy = [];
+            const rowCopy: number[][] = [];
             for (let blockCol = 0; blockCol < component.blocks[blockRow].length; blockCol++) {
               const originalBlock = component.blocks[blockRow][blockCol];
               if (originalBlock && originalBlock.length === 64) {
-                // Copy the 64 DCT coefficients
-                const blockCopy = new Int32Array(64);
+                // Copy the 64 DCT coefficients as regular number array
+                const blockCopy: number[] = [];
                 for (let coefIndex = 0; coefIndex < 64; coefIndex++) {
                   blockCopy[coefIndex] = originalBlock[coefIndex];
                 }
                 rowCopy.push(blockCopy);
               } else {
-                rowCopy.push(originalBlock);
+                rowCopy.push(Array.from(originalBlock || []));
               }
             }
             preservedBlocks.push(rowCopy);
@@ -770,20 +753,6 @@ const JpegImage = (function jpegImage() {
   return constructor;
 })();
 
-declare const module: { exports: typeof decode } | undefined;
-declare const window: { 
-  'jpeg-js'?: { 
-    decode?: typeof decode 
-  } 
-} | undefined;
-
-if (typeof module !== 'undefined') {
-  module.exports = decode;
-} else if (typeof window !== 'undefined') {
-  window['jpeg-js'] = window['jpeg-js'] || {};
-  window['jpeg-js'].decode = decode;
-}
-
 function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<DecoderOptions> = {}): DecodedImage {
   const defaultOpts = {
     // "undefined" means "Choose whether to transform colors based on the image's color model."
@@ -832,7 +801,10 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
     throw err;
   }
 
-  decoder.copyToImageData(image as unknown as { width: number; height: number; data: Uint8ClampedArray }, opts.formatAsRGBA);
+  decoder.copyToImageData(
+    image as unknown as { width: number; height: number; data: Uint8ClampedArray },
+    opts.formatAsRGBA
+  );
 
   return image;
 }
@@ -841,7 +813,17 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
 export { JpegImage, decode };
 
 // Create a default export that matches jp3g's API
-export default function jp3gFork(data: Uint8Array): JP3GForkResult {
+export default function jp3gFork(data: Uint8Array): {
+  toObject(): {
+    width: number;
+    height: number;
+    components: DecoderComponent[];
+    jfif?: JfifData | null;
+    adobe?: AdobeData | null;
+    comments: string[];
+    _decoder: JpegDecoder;
+  };
+} {
   return {
     toObject: function () {
       // Parse the JPEG and return structured data like jp3g does
