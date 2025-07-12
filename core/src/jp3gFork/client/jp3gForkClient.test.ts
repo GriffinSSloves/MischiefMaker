@@ -154,7 +154,9 @@ describe('Jp3gForkClient', () => {
     if (reparseResult.success) {
       expect(reparseResult.dctCoefficients?.totalBlocks ?? 0).toBeGreaterThan(0);
       // Expected number of luminance blocks = (width/8)*(height/8)
-      const expectedBlocks = (reparseResult.internalDecoder.width / 8) * (reparseResult.internalDecoder.height / 8);
+      const expectedBlocks = reparseResult.internalDecoder
+        ? (reparseResult.internalDecoder.width / 8) * (reparseResult.internalDecoder.height / 8)
+        : 0;
       expect(reparseResult.dctCoefficients?.totalBlocks).toBe(expectedBlocks);
       console.log(`✅ Modified JPEG can be parsed: ${reparseResult.success}`);
       console.log(`   DCT coefficients accessible: ${reparseResult.dctCoefficients ? 'Yes' : 'No'}`);
@@ -320,7 +322,9 @@ describe('Jp3gForkClient', () => {
 
       expect(reParseResult.success).toBe(true);
       expect(reParseResult.dctCoefficients?.totalBlocks ?? 0).toBeGreaterThan(0);
-      const expectedBlocks2 = (reParseResult.internalDecoder.width / 8) * (reParseResult.internalDecoder.height / 8);
+      const expectedBlocks2 = reParseResult.internalDecoder
+        ? (reParseResult.internalDecoder.width / 8) * (reParseResult.internalDecoder.height / 8)
+        : 0;
       expect(reParseResult.dctCoefficients?.totalBlocks).toBe(expectedBlocks2);
 
       console.log('🎉 SUCCESS: Re-encoded JPEG can be parsed!');

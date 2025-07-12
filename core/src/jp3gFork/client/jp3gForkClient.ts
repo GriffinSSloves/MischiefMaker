@@ -1,7 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
-import jp3gFork, { JpegImage } from '../decoder/jp3gDecoder';
+/* eslint-disable no-console */
+import jp3gFork, { JpegImage, type JpegDecoder, type DecoderComponent } from '../decoder/jp3gDecoder';
 import { IJpegInternalDecoder } from '../types/IJpegDecoder';
 import { JPEGEncoder } from '../encoder/jp3gEncoder';
+import type { JfifData, AdobeData } from '../decoder/utils/markerParsers';
 import { extractDCTFromPreservedBlocks, extractDCTFromInternalBlocks } from './utils/DCTExtractor';
 import { embedMessageInDctBlocks } from './utils/MessageEmbedder';
 import { extractMessageFromDctBlocks } from './utils/MessageExtractor';
@@ -9,7 +10,15 @@ import { extractMessageFromDctBlocks } from './utils/MessageExtractor';
 export interface IJp3gForkParseResult {
   success: boolean;
   error?: string;
-  jpegStructure?: any;
+  jpegStructure?: {
+    width: number;
+    height: number;
+    components: DecoderComponent[];
+    jfif?: JfifData | null;
+    adobe?: AdobeData | null;
+    comments: string[];
+    _decoder: JpegDecoder;
+  };
   dctCoefficients?: {
     blocks: Array<{
       dc: number;
@@ -19,7 +28,7 @@ export interface IJp3gForkParseResult {
     height: number;
     totalBlocks: number;
   };
-  internalDecoder?: any; // Access to jp3g's internal decoder
+  internalDecoder?: JpegDecoder;
 }
 
 export interface IJp3gForkEmbedResult {
@@ -151,7 +160,7 @@ export class Jp3gForkClient {
       );
 
       // Step 3: Re-encode the JPEG with modified coefficients
-      const encoder = new (JPEGEncoder as any)(quality);
+      const encoder = new JPEGEncoder(quality);
 
       // The `decoder` object contains all necessary metadata (quantization tables, comments)
       // and the modified DCT blocks. We pass it as both the data and metadata.
@@ -391,13 +400,13 @@ export class Jp3gForkClient {
       );
 
       // Step 3: Re-encode the JPEG with modified coefficients
-      const encoder = new (JPEGEncoder as any)(quality);
+      const encoder = new JPEGEncoder(quality);
 
       // Prepare DCT data for encoder
       const dctData = {
         width: decoder.width,
         height: decoder.height,
-        components: decoder.components.map((comp: any) => ({
+        components: decoder.components.map((comp: DecoderComponent) => ({
           dctBlocks: comp.dctBlocks,
           blocksPerLine: comp.blocksPerLine,
           blocksPerColumn: comp.blocksPerColumn,
@@ -438,7 +447,7 @@ export class Jp3gForkClient {
       console.log('=== JP3G FORK DEBUG: Internal Structure Analysis ===');
 
       // Create a new decoder directly
-      const decoder = new (JpegImage as any)();
+      const decoder = new (JpegImage as unknown as new () => JpegDecoder)();
       decoder.opts = {
         colorTransform: undefined,
         useTArray: true,
@@ -459,7 +468,7 @@ export class Jp3gForkClient {
       console.log('Components:', decoder.components?.length || 0);
 
       if (decoder.components) {
-        decoder.components.forEach((comp: any, index: number) => {
+        decoder.components.forEach((comp: DecoderComponent, index: number) => {
           console.log(`\n--- Component ${index} ---`);
           console.log('Properties:', Object.keys(comp));
           console.log('Scale X:', comp.scaleX);
@@ -476,7 +485,7 @@ export class Jp3gForkClient {
       console.log('\n=== ALL DECODER PROPERTIES ===');
       const allProps = Object.getOwnPropertyNames(decoder);
       allProps.forEach(prop => {
-        const value = decoder[prop];
+        const value = (decoder as unknown as Record<string, unknown>)[prop];
         console.log(`${prop}:`, typeof value, Array.isArray(value) ? `[${value.length}]` : '');
       });
     } catch (error) {

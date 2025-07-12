@@ -812,6 +812,9 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
 // Export the main functions and classes for our fork
 export { JpegImage, decode };
 
+// Export types for client use
+export type { JpegDecoder, DecoderComponent, DecoderOptions, DecodedImage };
+
 // Create a default export that matches jp3g's API
 export default function jp3gFork(data: Uint8Array): {
   toObject(): {
