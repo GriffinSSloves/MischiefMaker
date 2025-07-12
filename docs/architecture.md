@@ -189,6 +189,6 @@ The project now includes a complete DCT coefficient steganography implementation
 The JP3G Fork integrates with the existing architecture while providing a complete steganography solution:
 
 - **Maintains Interface Compatibility**: Can be used through existing steganography interfaces
-- **Platform Agnostic**: Works in browser, Node.js, and React Native environments  
+- **Platform Agnostic**: Works in browser, Node.js, and React Native environments
 - **Memory Optimized**: Efficient processing suitable for mobile and web platforms
 - **Future-Ready**: Designed for eventual separation into standalone package

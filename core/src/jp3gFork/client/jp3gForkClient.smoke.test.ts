@@ -13,9 +13,7 @@ function getAvailableTestImages(): string[] {
   try {
     const imagesDir = join(testDir, 'images');
     const files = readdirSync(imagesDir);
-    const imageFiles = files.filter(file => 
-      /\.(jpg|jpeg|png)$/i.test(file)
-    );
+    const imageFiles = files.filter(file => /\.(jpg|jpeg|png)$/i.test(file));
     console.log(`Found ${imageFiles.length} test images:`, imageFiles);
     return imageFiles;
   } catch (error) {
@@ -32,7 +30,7 @@ const testMessage = 'Hello, this is a test message!';
 describe('Jp3gForkClient Smoke Tests', () => {
   const client = new Jp3gForkClient();
 
-  describe.each(testImages)('Testing %s', (imageName) => {
+  describe.each(testImages)('Testing %s', imageName => {
     let imageBuffer: Uint8Array;
     let modifiedJpeg: Uint8Array | undefined;
 
@@ -42,11 +40,11 @@ describe('Jp3gForkClient Smoke Tests', () => {
         const buffer = readFileSync(imagePath);
         imageBuffer = new Uint8Array(buffer);
         expect(imageBuffer.length).toBeGreaterThan(0);
-        
+
         // Validate JPEG magic bytes
         expect(imageBuffer[0]).toBe(0xff);
         expect(imageBuffer[1]).toBe(0xd8);
-        
+
         console.log(`✓ Loaded ${imageName}: ${(imageBuffer.length / 1024).toFixed(1)} KB with valid JPEG format`);
       } catch (error) {
         console.error(`✗ Failed to load ${imageName}:`, error);

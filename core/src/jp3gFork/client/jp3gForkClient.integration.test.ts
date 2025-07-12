@@ -12,9 +12,7 @@ function getAvailableTestImages(): string[] {
   try {
     const imagesDir = join(testDir, 'images');
     const files = readdirSync(imagesDir);
-    const imageFiles = files.filter(file => 
-      /\.(jpg|jpeg|png)$/i.test(file)
-    );
+    const imageFiles = files.filter(file => /\.(jpg|jpeg|png)$/i.test(file));
     console.log(`Integration: Found ${imageFiles.length} test images for testing:`, imageFiles);
     return imageFiles;
   } catch (error) {
@@ -28,7 +26,7 @@ describe('Jp3gForkClient Integration Tests', () => {
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const testDir = resolve(__dirname, '../../../tests');
   const testImages = getAvailableTestImages();
-  
+
   // Use the first available image for detailed integration tests
   const primaryTestImage = testImages[0];
   const testImagePath = resolve(testDir, 'images', primaryTestImage);
