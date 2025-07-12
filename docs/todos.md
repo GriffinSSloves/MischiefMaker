@@ -51,6 +51,32 @@ All legacy Huffman limitations have been resolved. The fork now produces fully s
 
 No outstanding issues remain for the forked encoder.
 
+### **jp3gDecoder.ts Refactoring ✅ COMPLETED (2025-07-11)**
+
+Successfully refactored the monolithic jp3gDecoder.ts (946 lines) into a modular architecture following the coding standards established by jp3gencoder.ts. Applied test-driven methodology throughout.
+
+**Extracted Utility Modules:**
+
+1. **markerParsers.ts** - 11 JPEG marker parsing functions (15 test cases)
+   - parseAPP0, parseAPP1, parseAPP14, parseDQT, parseDHT, parseSOF, etc.
+   - Fixed parseSOSHeader test failure by adding missing scanLength read
+
+2. **colorSpaceConverter.ts** - 8 color space conversion functions (19 test cases)
+   - convertColorSpace with support for grayscale, RGB, CMYK
+   - Fixed scaling logic test error in conversion expectations
+
+3. **imageDataBuilder.ts** - 4 HTML5 Canvas ImageData formatting functions (13 test cases)
+   - copyToImageData routing based on component count
+   - Support for RGBA and RGB formatting
+
+**Results:**
+
+- ✅ Reduced jp3gDecoder.ts from 946 to ~640 lines (35% reduction)
+- ✅ All 47 new utility tests pass
+- ✅ All jp3gForkClient integration tests pass (no regressions)
+- ✅ Maintained complete steganography functionality
+- ✅ Improved maintainability and coding standards compliance
+
 ---
 
 ## HIGH PRIORITY: DCT Coefficient Implementation
