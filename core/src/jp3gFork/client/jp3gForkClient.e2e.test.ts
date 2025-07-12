@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath, resolve } from 'url';
+import process from 'process';
 import { Jp3gForkClient } from './jp3gForkClient';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,9 +24,23 @@ function getAvailableTestImages(): string[] {
   }
 }
 
-const testImages = getAvailableTestImages();
+// Development mode: test specific image only
+const devImage = process.env.JP3G_DEV_IMAGE;
+const allTestImages = getAvailableTestImages();
+const testImages = devImage ? [devImage] : allTestImages;
 
-describe('Jp3gForkClient E2E', () => {
+// Log testing mode
+if (devImage) {
+  console.log(`🔧 E2E Development mode: Testing single image "${devImage}"`);
+} else {
+  console.log(`🧪 E2E Testing all ${testImages.length} available images`);
+}
+
+// Check for long test execution
+//const isLongTest = process.env.LONG_TESTS === 'true' || process.env.JP3G_TESTS === 'true' || !!devImage;
+const isLongTest = true;
+
+describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
   const client = new Jp3gForkClient();
   const outputDir = path.join(testDir, 'output');
 

@@ -328,6 +328,15 @@ pnpm run test:run tests/integration/
 # Run JP3G Fork tests (all categories)
 pnpm run test:run src/jp3gFork/client/
 
+# Run JP3G Fork tests with conditional execution
+LONG_TESTS=true pnpm run test:run src/jp3gFork/client/
+# OR specifically enable JP3G tests
+JP3G_TESTS=true pnpm run test:run src/jp3gFork/client/
+
+# Run JP3G Fork tests with single image (development)
+JP3G_DEV_IMAGE=FacebookPFP.jpg pnpm run test:run src/jp3gFork/client/jp3gForkClient.smoke.test.ts
+JP3G_DEV_IMAGE=IMG_3457.JPG pnpm run test:run src/jp3gFork/client/
+
 # Run with coverage
 pnpm run test:coverage
 
@@ -435,6 +444,65 @@ test('should successfully embed and extract message', async () => {
 // ❌ BAD: Hard-coded list that gets outdated
 const testImages = ['image1.jpg', 'image2.jpg']; // Missing new images
 ```
+
+### 6. **Conditional Test Execution for Long Tests**
+
+**✅ JP3G Fork Test Gating:**
+
+```typescript
+// Check for long test execution
+const isLongTest = process.env.LONG_TESTS === 'true' || process.env.JP3G_TESTS === 'true';
+
+describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
+  // Tests only run when explicitly enabled
+});
+```
+
+**Usage:**
+```bash
+# Skip JP3G tests (default) - fast test runs
+pnpm run test:run
+
+# Run JP3G tests - comprehensive testing
+LONG_TESTS=true pnpm run test:run src/jp3gFork/client/
+JP3G_TESTS=true pnpm run test:run src/jp3gFork/client/
+```
+
+**Why?** JP3G tests are slower (multi-second execution) and test complex JPEG processing. Conditional execution allows:
+- ⚡ Fast test runs during regular development  
+- 🧪 Comprehensive testing when needed
+- 🚀 CI/CD flexibility for different test phases
+
+### 7. **Development Mode Single-Image Testing**
+
+**✅ Fast Development Iteration:**
+
+```typescript
+// Development mode: test specific image only
+const devImage = process.env.JP3G_DEV_IMAGE;
+const testImages = devImage ? [devImage] : allTestImages;
+
+if (devImage) {
+  console.log(`🔧 Development mode: Testing single image "${devImage}"`);
+}
+```
+
+**Usage Examples:**
+```bash
+# Test only one image for fast iteration
+JP3G_DEV_IMAGE=FacebookPFP.jpg pnpm run test:run src/jp3gFork/client/jp3gForkClient.smoke.test.ts
+
+# Test all categories with single image
+JP3G_DEV_IMAGE=IMG_3457.JPG pnpm run test:run src/jp3gFork/client/
+
+# Test new image you just added
+JP3G_DEV_IMAGE=NewImage.jpg pnpm run test:run src/jp3gFork/client/
+```
+
+**Benefits:**
+- 🚀 **Fast feedback loop** - test changes on one image quickly
+- 🐛 **Targeted debugging** - isolate issues to specific images
+- 🔄 **Development workflow** - iterate rapidly when developing new features
 
 ## AI-Friendly Testing
 

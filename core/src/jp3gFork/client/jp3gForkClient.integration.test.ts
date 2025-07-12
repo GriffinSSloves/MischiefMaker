@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, writeFileSync, readdirSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import process from 'process';
 import { Jp3gForkClient } from './jp3gForkClient';
 import { Buffer } from 'buffer';
 
@@ -21,14 +22,28 @@ function getAvailableTestImages(): string[] {
   }
 }
 
-describe('Jp3gForkClient Integration Tests', () => {
+// Check for long test execution
+//const isLongTest = process.env.LONG_TESTS === 'true' || process.env.JP3G_TESTS === 'true';
+const isLongTest = true;
+
+describe.skipIf(!isLongTest)('Jp3gForkClient Integration Tests', () => {
   const client = new Jp3gForkClient();
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const testDir = resolve(__dirname, '../../../tests');
-  const testImages = getAvailableTestImages();
+
+  // Development mode: use specific image or first available
+  const devImage = process.env.JP3G_DEV_IMAGE;
+  const allTestImages = getAvailableTestImages();
+  const testImages = devImage ? [devImage] : allTestImages;
 
   // Use the first available image for detailed integration tests
   const primaryTestImage = testImages[0];
+
+  if (devImage) {
+    console.log(`🔧 Integration Development mode: Using "${devImage}"`);
+  } else {
+    console.log(`🧪 Integration testing with primary image: "${primaryTestImage}"`);
+  }
   const testImagePath = resolve(testDir, 'images', primaryTestImage);
   let testImageBuffer: Uint8Array;
 

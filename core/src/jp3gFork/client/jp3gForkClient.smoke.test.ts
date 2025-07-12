@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { Buffer } from 'buffer';
+import process from 'process';
 import { Jp3gForkClient } from './jp3gForkClient';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -23,11 +24,25 @@ function getAvailableTestImages(): string[] {
   }
 }
 
-const testImages = getAvailableTestImages();
+// Development mode: test specific image only
+const devImage = process.env.JP3G_DEV_IMAGE;
+const allTestImages = getAvailableTestImages();
+const testImages = devImage ? [devImage] : allTestImages;
+
+// Log testing mode
+if (devImage) {
+  console.log(`🔧 Development mode: Testing single image "${devImage}"`);
+} else {
+  console.log(`🧪 Testing all ${testImages.length} available images`);
+}
 
 const testMessage = 'Hello, this is a test message!';
 
-describe('Jp3gForkClient Smoke Tests', () => {
+// Check for long test execution
+//  const isLongTest = process.env.LONG_TESTS === 'true' || process.env.JP3G_TESTS === 'true' || !!devImage;
+const isLongTest = true;
+
+describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
   const client = new Jp3gForkClient();
 
   describe.each(testImages)('Testing %s', imageName => {
