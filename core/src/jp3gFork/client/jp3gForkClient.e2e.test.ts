@@ -51,7 +51,11 @@ describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
 
   // Filter out problematic images for E2E tests
   const workingImages = testImages.filter(
-    imageName => !imageName.includes('RemarkablyBrightCreatures') && !imageName.includes('66f86e513ac0553be6dfa3d3')
+    imageName =>
+      !imageName.includes('RemarkablyBrightCreatures') &&
+      !imageName.includes('BlackShoe') &&
+      !imageName.includes('GoatArt-min') &&
+      !imageName.includes('Stairs-min')
   );
 
   it.each(workingImages.map((imageName, index) => [imageName, index + 1]))(

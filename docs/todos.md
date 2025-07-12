@@ -10,6 +10,7 @@ The DCT-based jp3g fork pipeline is fully functional. The only remaining functio
 - Add PSNR/SSIM visual regression testing (target: >40 dB)
 - Investigate minor color-shift in some re-encoded images
 - Performance optimization for large image processing
+- Make sure all jpeg images work
 
 ---
 
