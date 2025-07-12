@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 /* -*- tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- /
 /* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
 /*
@@ -81,6 +79,31 @@ interface ExtendedFrame extends Frame {
   maxV?: number;
 }
 
+type DecodeFunction = (component: ExtendedScanComponent, block: Int32Array) => void;
+
+interface LegacyXMLHttpRequest extends XMLHttpRequest {
+  mozResponseArrayBuffer?: ArrayBuffer;
+}
+
+interface JpegImageConstructor {
+  new (): JpegDecoder;
+  resetMaxMemoryUsage: (limit: number) => void;
+  getBytesAllocated: () => number;
+  requestMemoryAllocation: (bytes: number) => void;
+}
+
+interface JP3GForkResult {
+  toObject(): {
+    width: number;
+    height: number;
+    components: DecoderComponent[];
+    jfif?: JfifData | null;
+    adobe?: AdobeData | null;
+    comments: string[];
+    _decoder: JpegDecoder;
+  };
+}
+
 interface FrameComponent {
   h: number;
   v: number;
@@ -115,8 +138,8 @@ interface DecoderComponent {
 interface JpegDecoder {
   width: number;
   height: number;
-  jfif?: any;
-  adobe?: any;
+  jfif?: JfifData | null;
+  adobe?: AdobeData | null;
   components: DecoderComponent[];
   comments: string[];
   exifBuffer?: Uint8Array;
@@ -216,7 +239,7 @@ const JpegImage = (function jpegImage() {
         successive,
       });
 
-    function decodeMcu(component: ExtendedScanComponent, decode: any, mcu: number, row: number, col: number): void {
+    function decodeMcu(component: ExtendedScanComponent, decode: DecodeFunction, mcu: number, row: number, col: number): void {
       if (!mcusPerLine) {
         throw new Error('mcusPerLine not initialized');
       }
@@ -230,7 +253,7 @@ const JpegImage = (function jpegImage() {
       }
       decode(component, component.blocks[blockRow][blockCol]);
     }
-    function decodeBlock(component: ExtendedScanComponent, decode: any, mcu: number): void {
+    function decodeBlock(component: ExtendedScanComponent, decode: DecodeFunction, mcu: number): void {
       const blockRow = (mcu / component.blocksPerLine) | 0;
       const blockCol = mcu % component.blocksPerLine;
       // If the block is missing and we're in tolerant mode, just skip it.
@@ -345,10 +368,11 @@ const JpegImage = (function jpegImage() {
       xhr.responseType = 'arraybuffer';
       xhr.onload = function (this: JpegDecoder) {
         // TODO catch parse error
-        const data = new Uint8Array(xhr.response || (xhr as any).mozResponseArrayBuffer);
+        const data = new Uint8Array(xhr.response || (xhr as LegacyXMLHttpRequest).mozResponseArrayBuffer);
         this.parse(data);
-        if ((this as any).onload) {
-          (this as any).onload();
+        const callback = (this as JpegDecoder & { onload?: () => void }).onload;
+        if (callback) {
+          callback();
         }
       }.bind(this);
       xhr.send(null);
@@ -652,7 +676,7 @@ const JpegImage = (function jpegImage() {
             const quantIdx = cp[j].quantizationIdx;
             if (quantIdx !== undefined) {
               cp[j].quantizationTable = quantizationTables[quantIdx];
-              delete (cp[j] as any).quantizationIdx;
+              delete (cp[j] as FrameComponent & { quantizationIdx?: number }).quantizationIdx;
             }
           }
         }
@@ -691,7 +715,7 @@ const JpegImage = (function jpegImage() {
         }
 
         this.components.push({
-          lines: buildComponentData(component as any),
+          lines: buildComponentData(component as FrameComponent),
           scaleX: component.h / frame.maxH!,
           scaleY: component.v / frame.maxV!,
           // FORK MODIFICATION: Expose the preserved DCT coefficients
@@ -746,8 +770,12 @@ const JpegImage = (function jpegImage() {
   return constructor;
 })();
 
-declare const module: any;
-declare const window: any;
+declare const module: { exports: typeof decode } | undefined;
+declare const window: { 
+  'jpeg-js'?: { 
+    decode?: typeof decode 
+  } 
+} | undefined;
 
 if (typeof module !== 'undefined') {
   module.exports = decode;
@@ -769,7 +797,7 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
 
   const opts = { ...defaultOpts, ...userOpts };
   const arr = new Uint8Array(jpegData);
-  const decoder = new (JpegImage as any)() as JpegDecoder;
+  const decoder = new (JpegImage as unknown as JpegImageConstructor)();
   decoder.opts = opts;
   // If this constructor ever supports async decoding this will need to be done differently.
   // Until then, treating as singleton limit is fine.
@@ -804,7 +832,7 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
     throw err;
   }
 
-  decoder.copyToImageData(image as any, opts.formatAsRGBA);
+  decoder.copyToImageData(image as unknown as { width: number; height: number; data: Uint8ClampedArray }, opts.formatAsRGBA);
 
   return image;
 }
@@ -813,11 +841,11 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
 export { JpegImage, decode };
 
 // Create a default export that matches jp3g's API
-export default function jp3gFork(data: Uint8Array): any {
+export default function jp3gFork(data: Uint8Array): JP3GForkResult {
   return {
     toObject: function () {
       // Parse the JPEG and return structured data like jp3g does
-      const decoder = new (JpegImage as any)() as JpegDecoder;
+      const decoder = new (JpegImage as unknown as JpegImageConstructor)();
       decoder.opts = {
         colorTransform: undefined,
         useTArray: true,
