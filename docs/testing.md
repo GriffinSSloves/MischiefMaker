@@ -20,7 +20,56 @@ MischiefMaker uses a comprehensive testing strategy that emphasizes real behavio
 - Brittle tests that break during refactoring
 - Tests that pass but don't catch real bugs
 
-### 2. **Test Real Behavior, Not Implementation Details**
+### 2. **Functional Behavior > Structural Validation**
+
+**✅ Focus on What Matters:**
+
+- Test message encoding and extraction accuracy
+- Validate steganography algorithms work correctly
+- Ensure error handling and edge cases are covered
+- Performance and capacity validations
+
+**❌ Avoid Structural "Fluff" Tests:**
+
+- Pure structural validations (block counts, exact dimensions)
+- Implementation detail checks that don't affect functionality
+- Tests that validate internal state without behavioral significance
+- Rigid assertions on computed values that may vary
+
+### 3. **Parameterized Tests > Manual Loops**
+
+**✅ Use Vitest's Built-in Parameterization:**
+
+```typescript
+// ✅ GOOD: Using describe.each for multiple test scenarios
+describe.each(testImages)('Testing %s', (imageName) => {
+  test('should successfully embed and extract message', async () => {
+    // Test logic here
+  });
+});
+
+// ✅ GOOD: Using it.each for multiple parameter sets
+it.each([
+  ['short message', 'Hello'],
+  ['medium message', 'Hello, this is a longer test message'],
+  ['unicode message', '🎉 Test with emojis 🚀'],
+])('should handle %s: "%s"', async (description, message) => {
+  // Test logic here
+});
+```
+
+**❌ Avoid Manual Loops:**
+
+```typescript
+// ❌ BAD: Manual forEach loops
+testImages.forEach((imageName) => {
+  describe(`Testing ${imageName}`, () => {
+    // Tests here - harder to debug, no proper parameterization
+  });
+});
+```
+
+### 4. **Test Real Behavior, Not Implementation Details**
 
 ```typescript
 // ✅ GOOD: Testing actual behavior
@@ -276,6 +325,9 @@ pnpm run test:run src/algorithms/SimpleLSBDecoder.test.ts
 # Run integration tests only
 pnpm run test:run tests/integration/
 
+# Run JP3G Fork tests (all categories)
+pnpm run test:run src/jp3gFork/client/
+
 # Run with coverage
 pnpm run test:coverage
 
@@ -339,6 +391,49 @@ it('should handle empty message', async () => {
 it('should handle single character message', async () => {
 it('should handle maximum message length', async () => {
 it('should fail with insufficient pixel data', async () => {
+```
+
+### 5. **Dynamic Test Image Management**
+
+**✅ Automatic Image Discovery:**
+
+```typescript
+// ✅ GOOD: Dynamic image loading
+function getAvailableTestImages(): string[] {
+  try {
+    const imagesDir = join(testDir, 'images');
+    const files = readdirSync(imagesDir);
+    return files.filter((file) => /\.(jpg|jpeg|png)$/i.test(file));
+  } catch (error) {
+    console.error('Failed to read test images directory:', error);
+    return ['fallback-image.jpg']; // Graceful fallback
+  }
+}
+```
+
+**✅ Graceful Problem Image Handling:**
+
+```typescript
+// ✅ GOOD: Filter out known problematic images
+const workingImages = testImages.filter(
+  (imageName) => !imageName.includes('RemarkablyBrightCreatures') && !imageName.includes('66f86e513ac0553be6dfa3d3'),
+);
+
+// ✅ GOOD: Skip in tests with clear messaging
+test('should successfully embed and extract message', async () => {
+  if (imageName.includes('RemarkablyBrightCreatures')) {
+    console.log(`⚠️ Skipping ${imageName} - known parsing issues`);
+    return;
+  }
+  // Test logic here
+});
+```
+
+**❌ Avoid Hard-Coded Image Lists:**
+
+```typescript
+// ❌ BAD: Hard-coded list that gets outdated
+const testImages = ['image1.jpg', 'image2.jpg']; // Missing new images
 ```
 
 ## AI-Friendly Testing
