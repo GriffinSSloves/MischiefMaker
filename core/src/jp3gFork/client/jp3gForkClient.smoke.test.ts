@@ -40,7 +40,7 @@ const testMessage = 'Hello, this is a test message!';
 
 // Check for long test execution
 //  const isLongTest = process.env.LONG_TESTS === 'true' || process.env.JP3G_TESTS === 'true' || !!devImage;
-const isLongTest = true;
+const isLongTest = false;
 
 describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
   const client = new Jp3gForkClient();

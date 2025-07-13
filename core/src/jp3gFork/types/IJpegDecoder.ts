@@ -11,10 +11,19 @@ export interface IJpegDecoderComponent {
   blocksPerLine?: number;
   /** Number of vertical blocks in the component */
   blocksPerColumn?: number;
+  /** Quantization table for this component */
+  quantizationTable?: Int32Array | number[];
+  /** Component scale factors */
+  scaleX?: number;
+  scaleY?: number;
 }
 
 export interface IJpegInternalDecoder {
   width: number;
   height: number;
   components: IJpegDecoderComponent[];
+  /** JPEG comments */
+  comments?: string[];
+  /** EXIF data buffer */
+  exifBuffer?: Uint8Array | null;
 }

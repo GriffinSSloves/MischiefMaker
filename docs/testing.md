@@ -459,6 +459,7 @@ describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
 ```
 
 **Usage:**
+
 ```bash
 # Skip JP3G tests (default) - fast test runs
 pnpm run test:run
@@ -469,7 +470,8 @@ JP3G_TESTS=true pnpm run test:run src/jp3gFork/client/
 ```
 
 **Why?** JP3G tests are slower (multi-second execution) and test complex JPEG processing. Conditional execution allows:
-- ⚡ Fast test runs during regular development  
+
+- ⚡ Fast test runs during regular development
 - 🧪 Comprehensive testing when needed
 - 🚀 CI/CD flexibility for different test phases
 
@@ -488,6 +490,7 @@ if (devImage) {
 ```
 
 **Usage Examples:**
+
 ```bash
 # Test only one image for fast iteration
 JP3G_DEV_IMAGE=FacebookPFP.jpg pnpm run test:run src/jp3gFork/client/jp3gForkClient.smoke.test.ts
@@ -500,6 +503,7 @@ JP3G_DEV_IMAGE=NewImage.jpg pnpm run test:run src/jp3gFork/client/
 ```
 
 **Benefits:**
+
 - 🚀 **Fast feedback loop** - test changes on one image quickly
 - 🐛 **Targeted debugging** - isolate issues to specific images
 - 🔄 **Development workflow** - iterate rapidly when developing new features

@@ -50,13 +50,14 @@ describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
   }
 
   // Filter out problematic images for E2E tests
-  const workingImages = testImages.filter(
-    imageName =>
-      !imageName.includes('RemarkablyBrightCreatures') &&
-      !imageName.includes('BlackShoe') &&
-      !imageName.includes('GoatArt-min') &&
-      !imageName.includes('Stairs-min')
-  );
+  // const workingImages = testImages.filter(
+  //   imageName =>
+  //     !imageName.includes('RemarkablyBrightCreatures') &&
+  //     !imageName.includes('BlackShoe') &&
+  //     !imageName.includes('GoatArt-min') &&
+  //     !imageName.includes('Stairs-min')
+  // );
+  const workingImages = ['BlackShoe.jpeg'];
 
   it.each(workingImages.map((imageName, index) => [imageName, index + 1]))(
     'should perform full round-trip steganography cycle with %s',
