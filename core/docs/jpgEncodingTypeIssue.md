@@ -38,21 +38,42 @@ Through comprehensive testing of our image dataset, we discovered a clear correl
 
 ## Root Cause Analysis
 
-### Encoder Bug Location
+### Confirmed Root Cause: Subsampling Format Mismatch
 
-File: `core/src/jp3gFork/encoder/jp3gEncoder.ts` (lines 459-460)
+**Debug Test Results** (Selfie.jpg analysis):
 
-```typescript
-// PROBLEMATIC CODE:
-hSampRatio: decoderObj.components[1] ? Math.round(1 / (decoderObj.components[1].scaleX || 1)) : 1,
-vSampRatio: decoderObj.components[1] ? Math.round(1 / (decoderObj.components[1].scaleY || 1)) : 1,
+```
+Original image subsampling:
+  Y component: scaleX=1, scaleY=1 (full resolution)
+  Cb component: scaleX=0.5, scaleY=0.5 (half resolution)  
+  Cr component: scaleX=0.5, scaleY=0.5 (half resolution)
 ```
 
-**Issue**: When input has `scaleX/Y = 0.5` (from 1:0.5:0.5 subsampling):
+This confirms **4:2:0 subsampling** in the original image (chroma components at half resolution).
 
-- Calculation: `Math.round(1/0.5) = 2`
-- Result: Forces 4:2:0 subsampling in output
-- Effect: Destroys color information, creating grey filter appearance
+### Primary Issue: Hardcoded SOF0 Header
+
+File: `core/src/jp3gFork/encoder/utils/jpegHeaderWriters.ts` (lines 78, 81, 84)
+
+```typescript
+// CURRENT HARDCODED VALUES:
+writer.writeByte(0x11); // Y component 
+writer.writeByte(0x11); // U component - PROBLEM: should be 0x22 for 4:2:0
+writer.writeByte(0x11); // V component - PROBLEM: should be 0x22 for 4:2:0
+```
+
+**Issue**: The SOF0 header always declares **4:4:4 subsampling** (`0x11`) regardless of original image format.
+
+### Secondary Issue: Forced Upsampling
+
+File: `core/src/jp3gFork/encoder/jp3gEncoder.ts` (lines 524-548)
+
+The `upsampleComponent` function forces all chroma components to match luma resolution, converting 4:2:0 → 4:4:4. Combined with the hardcoded SOF0 header, this changes the color representation.
+
+**Effect**: 
+- Original 4:2:0 images lose their proper chroma subsampling
+- Visual artifacts appear as "grey filter" effect
+- File size increases significantly (17.4% in test case)
 
 ### Why This Matters for Steganography
 
@@ -74,7 +95,7 @@ vSampRatio: decoderObj.components[1] ? Math.round(1 / (decoderObj.components[1].
 
 ## Solution Options
 
-### Option 1: Preprocessing Pipeline (Recommended)
+### Option 1: Fix Encoder Subsampling Logic (Technical Solution)
 
 **Approach**: Convert all images to 4:4:4 format during preprocessing
 
@@ -147,3 +168,40 @@ Comprehensive analysis performed using custom debug tests:
 3. **Long-term**: Consider fixing encoder for completeness (optional)
 
 This approach provides immediate resolution while maintaining compatibility and meeting messaging platform constraints.
+
+## Latest Debug Findings (2025-01-13)
+
+### Confirmed Visual Test Results
+
+**Test Setup**: Enhanced debugging test with Selfie.jpg showing:
+
+```bash
+Original image subsampling:
+  Y component: scaleX=1, scaleY=1 (full resolution)
+  Cb component: scaleX=0.5, scaleY=0.5 (half resolution)  
+  Cr component: scaleX=0.5, scaleY=0.5 (half resolution)
+
+Modified image results:
+  Size change: 276,642 → 324,734 bytes (+17.4%)
+  Size ratio: 1.174 (indicates quality degradation)
+```
+
+### Technical Root Cause Confirmed
+
+The grey filter issue is definitively caused by **subsampling format conversion**:
+
+1. **Input**: 4:2:0 subsampling (chroma at half resolution)
+2. **Processing**: Forced conversion to 4:4:4 via hardcoded SOF0 header (`0x11`) 
+3. **Output**: 4:4:4 subsampling with degraded color representation
+4. **Visual Effect**: Grey filter appearance due to chroma information loss
+
+### Implementation Recommendation
+
+Based on debugging results, **Option 2 (Preprocessing Pipeline)** remains the recommended approach because:
+
+- Immediate fix without complex encoder modifications
+- Addresses both grey filter and file size constraints
+- Lower risk of introducing decoder compatibility issues
+- Can be implemented at the application level without touching jp3g fork internals
+
+The technical encoder fix (Option 1) would require significant changes to MCU encoding logic and risks breaking existing functionality.
