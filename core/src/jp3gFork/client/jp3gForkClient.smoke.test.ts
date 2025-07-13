@@ -4,7 +4,7 @@ import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { Buffer } from 'buffer';
 import process from 'process';
-import { Jp3gForkClient } from './jp3gForkClient';
+import { EnhancedJp3gForkClient } from './EnhancedJp3gForkClient';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const testDir = resolve(__dirname, '../../../tests');
@@ -26,10 +26,9 @@ function getAvailableTestImages(): string[] {
 
 // Development mode: test specific image only
 const devImage = process.env.JP3G_DEV_IMAGE;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allTestImages = getAvailableTestImages();
-//const testImages = devImage ? [devImage] : allTestImages;
-const testImages = ['Stairs.JPG'];
+const testImages = devImage ? [devImage] : allTestImages;
+//const testImages = ['Stairs.JPG'];
 
 // Log testing mode
 if (devImage) {
@@ -45,7 +44,7 @@ const testMessage = 'Hello, this is a test message!';
 const isLongTest = true;
 
 describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
-  const client = new Jp3gForkClient(true); // Enable debug mode
+  const client = new EnhancedJp3gForkClient(true); // Enable debug mode
 
   describe.each(testImages)('Testing %s', imageName => {
     let imageBuffer: Uint8Array;
@@ -109,7 +108,7 @@ describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
 
 // Helper function to run tests for a specific image using clean interface
 export function testSingleImageJp3g(imageName: string) {
-  const client = new Jp3gForkClient(true); // Enable debug mode
+  const client = new EnhancedJp3gForkClient(true); // Enable debug mode
   const imagePath = join(testDir, 'images', imageName);
 
   try {

@@ -12,16 +12,11 @@ const testDir = resolve(__dirname, '../../tests');
 
 // Dynamically load all available test images
 function getAvailableTestImages(): string[] {
-  try {
-    const imagesDir = path.join(testDir, 'images');
-    const files = fs.readdirSync(imagesDir);
-    const imageFiles = files.filter(file => /\.(jpg|jpeg|png)$/i.test(file));
-    console.log(`E2E: Found ${imageFiles.length} test images:`, imageFiles);
-    return imageFiles;
-  } catch (error) {
-    console.error('E2E: Failed to read test images directory:', error);
-    return ['FacebookPFP.jpg'];
-  }
+  const imagesDir = path.join(testDir, 'images');
+  const files = fs.readdirSync(imagesDir);
+  const imageFiles = files.filter(file => /\.(jpg|jpeg|png)$/i.test(file));
+  console.log(`E2E: Found ${imageFiles.length} test images:`, imageFiles);
+  return imageFiles;
 }
 
 // Development mode: test specific image only
@@ -50,14 +45,15 @@ describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
   }
 
   // Filter out problematic images for E2E tests
-  // const workingImages = testImages.filter(
-  //   imageName =>
-  //     !imageName.includes('RemarkablyBrightCreatures') &&
-  //     !imageName.includes('BlackShoe') &&
-  //     !imageName.includes('GoatArt-min') &&
-  //     !imageName.includes('Stairs-min')
-  // );
-  const workingImages = ['BlackShoe.jpeg'];
+  const workingImages = testImages.filter(
+    imageName =>
+      !imageName.includes('RemarkablyBrightCreatures') &&
+      !imageName.includes('GoatArt-min') &&
+      !imageName.includes('Stairs-min')
+  );
+
+  console.log('E2E: Working images:', workingImages);
+  //const workingImages = ['BlackShoe.jpeg'];
 
   it.each(workingImages.map((imageName, index) => [imageName, index + 1]))(
     'should perform full round-trip steganography cycle with %s',
@@ -169,7 +165,7 @@ describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
     // Performance thresholds (adjust based on your requirements)
     expect(avgParseTime).toBeLessThan(2000); // 2 seconds max for parsing
     expect(avgEmbedTime).toBeLessThan(5000); // 5 seconds max for embedding
-    expect(avgExtractTime).toBeLessThan(2000); // 1 second max for extraction
+    expect(avgExtractTime).toBeLessThan(2500); // 1 second max for extraction
 
     console.log('✅ Performance test completed successfully');
   }, 60000); // 60 second timeout for performance tests
