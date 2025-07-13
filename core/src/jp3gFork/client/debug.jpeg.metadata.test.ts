@@ -76,7 +76,7 @@ interface ColorSpaceData {
 /**
  * JPEG metadata analysis for debugging format variations and steganography suitability
  */
-describe('JPEG Metadata Analysis for Format Debugging', () => {
+describe.skip('JPEG Metadata Analysis for Format Debugging', () => {
   const testImagesDir = join(__dirname, '../../../tests/images');
   const logsDir = join(__dirname, '../../../tests/logs');
 

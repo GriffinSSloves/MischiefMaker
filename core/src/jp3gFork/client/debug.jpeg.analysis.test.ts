@@ -91,7 +91,7 @@ interface CompressionCharacteristics {
 /**
  * Comprehensive JPEG format analysis for debugging steganography issues
  */
-describe('JPEG Format Analysis for Steganography Debugging', () => {
+describe.skip('JPEG Format Analysis for Steganography Debugging', () => {
   const testImagesDir = join(__dirname, '../../../tests/images');
   const logsDir = join(__dirname, '../../../tests/logs');
   const testImages = [

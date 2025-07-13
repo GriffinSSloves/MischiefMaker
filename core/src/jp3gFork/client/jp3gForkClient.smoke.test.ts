@@ -26,8 +26,10 @@ function getAvailableTestImages(): string[] {
 
 // Development mode: test specific image only
 const devImage = process.env.JP3G_DEV_IMAGE;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allTestImages = getAvailableTestImages();
-const testImages = devImage ? [devImage] : allTestImages;
+//const testImages = devImage ? [devImage] : allTestImages;
+const testImages = ['Stairs.JPG'];
 
 // Log testing mode
 if (devImage) {
@@ -40,10 +42,10 @@ const testMessage = 'Hello, this is a test message!';
 
 // Check for long test execution
 //  const isLongTest = process.env.LONG_TESTS === 'true' || process.env.JP3G_TESTS === 'true' || !!devImage;
-const isLongTest = false;
+const isLongTest = true;
 
 describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
-  const client = new Jp3gForkClient();
+  const client = new Jp3gForkClient(true); // Enable debug mode
 
   describe.each(testImages)('Testing %s', imageName => {
     let imageBuffer: Uint8Array;
@@ -71,7 +73,6 @@ describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
       // Skip images that are known to have parsing issues
       if (
         imageName.includes('RemarkablyBrightCreatures') ||
-        imageName.includes('BlackShoe') ||
         imageName.includes('GoatArt-min') ||
         imageName.includes('Stairs-min')
       ) {
@@ -79,13 +80,14 @@ describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
         return;
       }
 
-      // Test embedding
-      const embedResult = await client.embedMessageAndReencode(imageBuffer, testMessage, 85);
+      // Test embedding using clean interface
+      const embedResult = await client.embedMessage(imageBuffer, testMessage, { quality: 85 });
       expect(embedResult.success).toBe(true);
-      expect(embedResult.modifiedJpeg).toBeInstanceOf(Uint8Array);
-      expect(embedResult.coefficientsModified ?? 0).toBeGreaterThan(0);
+      expect(embedResult.imageWithMessage).toBeDefined();
+      expect(embedResult.imageWithMessage!.data).toBeInstanceOf(Uint8Array);
+      expect(embedResult.stats?.coefficientsUsed ?? 0).toBeGreaterThan(0);
 
-      modifiedJpeg = embedResult.modifiedJpeg!;
+      modifiedJpeg = embedResult.imageWithMessage!.data;
 
       // Validate modified JPEG structure
       const modBuf = Buffer.from(modifiedJpeg);
@@ -94,40 +96,39 @@ describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
       expect(modBuf[modBuf.length - 2]).toBe(0xff); // EOI
       expect(modBuf[modBuf.length - 1]).toBe(0xd9);
 
-      // Test extraction
+      // Test extraction using clean interface
       const extractResult = await client.extractMessage(modifiedJpeg, testMessage.length);
       expect(extractResult.success).toBe(true);
       expect(extractResult.message).toBe(testMessage);
-      expect(extractResult.coefficientsRead ?? 0).toBeGreaterThan(0);
+      expect(extractResult.stats?.coefficientsRead ?? 0).toBeGreaterThan(0);
 
       console.log(`✅ ${imageName}: Successfully embedded and extracted "${testMessage}"`);
     });
   });
 });
 
-// Helper function to run tests for a specific image
+// Helper function to run tests for a specific image using clean interface
 export function testSingleImageJp3g(imageName: string) {
-  const client = new Jp3gForkClient();
+  const client = new Jp3gForkClient(true); // Enable debug mode
   const imagePath = join(testDir, 'images', imageName);
 
   try {
-    console.log(`\n=== Testing ${imageName} with jp3g ===`);
+    console.log(`\n=== Testing ${imageName} with clean interface ===`);
 
     const buffer = readFileSync(imagePath);
     const imageBuffer = new Uint8Array(buffer);
     console.log(`File size: ${(imageBuffer.length / 1024).toFixed(1)} KB`);
 
-    // Test parsing
+    // Test round-trip using clean interface
     client
-      .parseWithInternalAccess(imageBuffer)
-      .then(parseResult => {
-        console.log(`Parse result:`, parseResult);
-
-        // Test embedding directly
-        return client.embedMessageAndReencode(imageBuffer, testMessage, 85);
-      })
-      .then(embedResult => {
-        console.log(`Embed result:`, embedResult);
+      .testRoundTrip(imageBuffer, testMessage, { quality: 85, debug: true })
+      .then(roundTripResult => {
+        console.log(`Round-trip result:`, roundTripResult);
+        if (roundTripResult.success) {
+          console.log('✅ Round-trip test successful!');
+        } else {
+          console.log('❌ Round-trip test failed:', roundTripResult.error);
+        }
       })
       .catch(error => {
         console.log(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);

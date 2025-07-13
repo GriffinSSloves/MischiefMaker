@@ -6,6 +6,14 @@ import type { JfifData, AdobeData } from '../decoder/utils/markerParsers';
 import { extractDCTFromPreservedBlocks, extractDCTFromInternalBlocks } from './utils/DCTExtractor';
 import { embedMessageInDctBlocks } from './utils/MessageEmbedder';
 import { extractMessageFromDctBlocks } from './utils/MessageExtractor';
+import {
+  ISteganographyClient,
+  SteganographyOptions,
+  EmbedResult,
+  ExtractResult,
+  RoundTripTestResult,
+  ImageBuffer,
+} from '../interfaces/ISteganographyClient';
 
 export interface IJp3gForkParseResult {
   success: boolean;
@@ -31,20 +39,278 @@ export interface IJp3gForkParseResult {
   internalDecoder?: JpegDecoder;
 }
 
-export interface IJp3gForkEmbedResult {
-  success: boolean;
-  error?: string;
-  modifiedJpeg?: Uint8Array;
-  coefficientsModified?: number;
-  blocks?: number;
+export interface IJp3gForkClientLegacy {
+  parseWithInternalAccess(imageBuffer: Uint8Array): Promise<IJp3gForkParseResult>;
+  debugInternalStructure(imageBuffer: Uint8Array): Promise<void>;
 }
 
 /**
- * Client that uses our forked jp3g to access internal DCT decoding functions
+ * JPEG Steganography Client using jp3g fork
+ *
+ * Implements the clean ISteganographyClient interface while providing
+ * internal debugging capabilities for development.
  */
-export class Jp3gForkClient {
+export class Jp3gForkClient implements ISteganographyClient, IJp3gForkClientLegacy {
+  private debugMode: boolean = false;
+
+  constructor(debugMode: boolean = false) {
+    this.debugMode = debugMode;
+  }
+
+  // ============================================================================
+  // PUBLIC INTERFACE METHODS (ISteganographyClient)
+  // ============================================================================
+
   /**
-   * Parse JPEG using our jp3g fork and try to access internal DCT data
+   * Hide a text message inside a JPEG image
+   */
+  async embedMessage(image: Uint8Array, message: string, options: SteganographyOptions = {}): Promise<EmbedResult> {
+    try {
+      if (this.debugMode) {
+        console.log('=== STEGANOGRAPHY EMBEDDING ===');
+        console.log(`Message: "${message}" (${message.length} chars)`);
+        console.log('Options:', options);
+      }
+
+      // Parse the original JPEG
+      const jpegObject = jp3gFork(image).toObject();
+      const decoder = jpegObject._decoder as IJpegInternalDecoder;
+
+      if (!decoder) {
+        return { success: false, error: 'Failed to access internal decoder' };
+      }
+
+      if (this.debugMode) {
+        console.log(`JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
+        console.log(`File size: ${image.length} bytes`);
+      }
+
+      // Embed message
+      const messageBytes = new TextEncoder().encode(message);
+      const embedStats = embedMessageInDctBlocks(decoder, messageBytes);
+
+      if (embedStats.bytesEmbedded < messageBytes.length) {
+        return {
+          success: false,
+          error: `Insufficient capacity: embedded ${embedStats.bytesEmbedded}/${messageBytes.length} bytes`,
+        };
+      }
+
+      // Determine quality
+      const quality = options.quality || this.estimateOriginalQuality(decoder);
+
+      if (this.debugMode) {
+        console.log(`Using quality: ${quality}`);
+        console.log(`Embedded ${embedStats.bytesEmbedded} bytes in ${embedStats.coefficientsModified} coefficients`);
+      }
+
+      // Re-encode with fixed subsampling bug
+      const encoder = new JPEGEncoder(quality);
+      const metadata = this.createEncoderMetadata(decoder, options);
+      const modifiedJpeg = encoder.encodeFromDCT(decoder, metadata, quality);
+
+      const imageBuffer: ImageBuffer = {
+        data: new Uint8Array(modifiedJpeg),
+        size: modifiedJpeg.length,
+      };
+
+      return {
+        success: true,
+        imageWithMessage: imageBuffer,
+        stats: {
+          messageLength: message.length,
+          coefficientsUsed: embedStats.coefficientsModified,
+          originalFileSize: image.length,
+          finalFileSize: modifiedJpeg.length,
+          qualityUsed: quality,
+        },
+      };
+    } catch (error) {
+      console.error('Embedding failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown embedding error',
+      };
+    }
+  }
+
+  /**
+   * Extract a hidden message from a JPEG image
+   */
+  async extractMessage(image: Uint8Array, expectedLength?: number): Promise<ExtractResult> {
+    try {
+      if (this.debugMode) {
+        console.log('=== STEGANOGRAPHY EXTRACTION ===');
+        console.log(`Expected length: ${expectedLength || 'auto-detect'} chars`);
+      }
+
+      // Parse the JPEG
+      const jpegObject = jp3gFork(image).toObject();
+      const decoder = jpegObject._decoder as IJpegInternalDecoder;
+
+      if (!decoder) {
+        return { success: false, error: 'Failed to access internal decoder' };
+      }
+
+      if (this.debugMode) {
+        console.log(`JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
+        console.log(`File size: ${image.length} bytes`);
+      }
+
+      // Extract message
+      const estimatedLength = expectedLength || this.estimateMessageLength(decoder);
+      const extractResult = extractMessageFromDctBlocks(decoder, estimatedLength);
+
+      if (extractResult.bytes.length === 0) {
+        return {
+          success: false,
+          error: 'No message found or extraction failed',
+        };
+      }
+
+      const extractedMessage = new TextDecoder().decode(extractResult.bytes);
+
+      if (this.debugMode) {
+        console.log(`Extracted: "${extractedMessage}"`);
+        console.log(`Read ${extractResult.coefficientsRead} coefficients`);
+      }
+
+      return {
+        success: true,
+        message: extractedMessage,
+        stats: {
+          messageLength: extractedMessage.length,
+          coefficientsRead: extractResult.coefficientsRead,
+        },
+      };
+    } catch (error) {
+      console.error('Extraction failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown extraction error',
+      };
+    }
+  }
+
+  /**
+   * Test round-trip: embed message, then extract it to verify
+   */
+  async testRoundTrip(
+    image: Uint8Array,
+    message: string,
+    options: SteganographyOptions = {}
+  ): Promise<RoundTripTestResult> {
+    try {
+      if (this.debugMode) {
+        console.log('=== ROUND-TRIP TEST ===');
+        console.log(`Testing message: "${message}"`);
+      }
+
+      // Step 1: Embed message
+      const embedResult = await this.embedMessage(image, message, options);
+
+      if (!embedResult.success || !embedResult.imageWithMessage) {
+        return {
+          success: false,
+          error: embedResult.error || 'Embedding failed',
+          originalMessage: message,
+        };
+      }
+
+      // Step 2: Extract message
+      const extractResult = await this.extractMessage(embedResult.imageWithMessage.data, message.length);
+
+      if (!extractResult.success) {
+        return {
+          success: false,
+          error: extractResult.error || 'Extraction failed',
+          originalMessage: message,
+        };
+      }
+
+      // Step 3: Verify round-trip
+      const messagesMatch = extractResult.message === message;
+
+      if (this.debugMode) {
+        console.log(`Original: "${message}"`);
+        console.log(`Extracted: "${extractResult.message}"`);
+        console.log(`Match: ${messagesMatch ? '✅ SUCCESS' : '❌ FAILURE'}`);
+      }
+
+      return {
+        success: messagesMatch,
+        originalMessage: message,
+        extractedMessage: extractResult.message,
+        messagesMatch,
+      };
+    } catch (error) {
+      console.error('Round-trip test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown round-trip error',
+        originalMessage: message,
+      };
+    }
+  }
+
+  // ============================================================================
+  // INTERNAL HELPER METHODS
+  // ============================================================================
+
+  private estimateOriginalQuality(decoder: IJpegInternalDecoder): number {
+    const quantTable = decoder.components[0]?.quantizationTable || [];
+    if (quantTable.length === 0) {
+      return 85;
+    }
+
+    const avgQuant = Array.from(quantTable).reduce((sum, val) => sum + val, 0) / quantTable.length;
+    return Math.max(10, Math.min(100, 100 - avgQuant));
+  }
+
+  private estimateMessageLength(decoder: IJpegInternalDecoder): number {
+    // Conservative estimate: assume we can use 10% of suitable coefficients
+    const component = decoder.components[0];
+    const blocks = component.dctBlocks || component.blocks || [];
+    const totalCoefficients = blocks.length * 64;
+    return Math.floor((totalCoefficients * 0.1) / 8); // bits to bytes
+  }
+
+  private createEncoderMetadata(decoder: IJpegInternalDecoder, options: SteganographyOptions) {
+    // Fix the subsampling bug mentioned in the analysis
+    const hSampRatio = decoder.components[1]
+      ? decoder.components[1].scaleX === 0.5
+        ? 1
+        : Math.round(1 / (decoder.components[1].scaleX || 1))
+      : 1;
+    const vSampRatio = decoder.components[1]
+      ? decoder.components[1].scaleY === 0.5
+        ? 1
+        : Math.round(1 / (decoder.components[1].scaleY || 1))
+      : 1;
+
+    return {
+      width: decoder.width,
+      height: decoder.height,
+      quantizationTables: options.preserveQuality
+        ? ([
+            Array.from(decoder.components[0]?.quantizationTable || []),
+            decoder.components[1] ? Array.from(decoder.components[1].quantizationTable || []) : undefined,
+          ] as [number[], number[]?])
+        : undefined,
+      hSampRatio,
+      vSampRatio,
+      comments: decoder.comments || [],
+      exif: decoder.exifBuffer || null,
+    };
+  }
+
+  // ============================================================================
+  // LEGACY/DEBUG METHODS (for internal testing and backwards compatibility)
+  // ============================================================================
+  /**
+   * LEGACY: Parse JPEG using our jp3g fork and try to access internal DCT data
+   *
+   * @deprecated Use the clean interface methods instead
    */
   async parseWithInternalAccess(imageBuffer: Uint8Array): Promise<IJp3gForkParseResult> {
     try {
@@ -132,315 +398,7 @@ export class Jp3gForkClient {
   }
 
   /**
-   * Complete end-to-end steganography: embed message and re-encode JPEG
-   */
-  async embedMessageAndReencode(imageBuffer: Uint8Array, message: string, quality = 85): Promise<IJp3gForkEmbedResult> {
-    try {
-      console.log('=== END-TO-END STEGANOGRAPHY: EMBED & RE-ENCODE ===');
-
-      // Step 1: Parse the original JPEG and extract DCT coefficients
-      const parseResult = await this.parseWithInternalAccess(imageBuffer);
-
-      if (!parseResult.success || !parseResult.internalDecoder) {
-        return {
-          success: false,
-          error: parseResult.error || 'Failed to parse original JPEG',
-        };
-      }
-
-      const decoder = parseResult.internalDecoder;
-      console.log(`Original JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
-
-      // Step 2: Embed message
-      const messageBytes = new TextEncoder().encode(message);
-      const embedStats = embedMessageInDctBlocks(decoder as IJpegInternalDecoder, messageBytes);
-
-      console.log(
-        `✅ Embedded ${embedStats.bytesEmbedded} bytes (${embedStats.bytesEmbedded * 8} bits) in ${embedStats.coefficientsModified} coefficients`
-      );
-
-      // Step 3: Re-encode the JPEG with modified coefficients
-      const encoder = new JPEGEncoder(quality);
-
-      // The `decoder` object contains all necessary metadata (quantization tables, comments)
-      // and the modified DCT blocks. We pass it as both the data and metadata.
-      console.log('Re-encoding JPEG with modified DCT coefficients...');
-      const modifiedJpeg = encoder.encodeFromDCT(decoder, decoder, quality);
-
-      console.log(`✅ Re-encoded JPEG: ${modifiedJpeg.length} bytes`);
-
-      return {
-        success: true,
-        modifiedJpeg: new Uint8Array(modifiedJpeg),
-        coefficientsModified: embedStats.coefficientsModified,
-        blocks: embedStats.blocksVisited,
-      };
-    } catch (error) {
-      console.error('End-to-end steganography failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown embedding error',
-      };
-    }
-  }
-
-  /**
-   * Extract embedded message from JPEG with steganography
-   */
-  async extractMessage(
-    imageBuffer: Uint8Array,
-    expectedMessageLength: number
-  ): Promise<{
-    success: boolean;
-    message?: string;
-    error?: string;
-    bitsExtracted?: number;
-    coefficientsRead?: number;
-  }> {
-    try {
-      console.log('=== EXTRACTING MESSAGE FROM STEGANOGRAPHY ===');
-
-      // Step 1: Parse the JPEG and extract DCT coefficients
-      const parseResult = await this.parseWithInternalAccess(imageBuffer);
-
-      if (!parseResult.success || !parseResult.internalDecoder) {
-        return {
-          success: false,
-          error: parseResult.error || 'Failed to parse JPEG for extraction',
-        };
-      }
-
-      const decoder = parseResult.internalDecoder;
-      console.log(`Extracting from JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
-
-      // Step 2: Extract message using helper
-      const extractResult = extractMessageFromDctBlocks(decoder as IJpegInternalDecoder, expectedMessageLength);
-
-      console.log(
-        `✅ Extracted ${extractResult.bytes.length} bytes (${extractResult.bitsExtracted} bits) from ${extractResult.coefficientsRead} coefficients`
-      );
-
-      const extractedMessage = new TextDecoder().decode(extractResult.bytes);
-
-      return {
-        success: true,
-        message: extractedMessage,
-        bitsExtracted: extractResult.bitsExtracted,
-        coefficientsRead: extractResult.coefficientsRead,
-      };
-    } catch (error) {
-      console.error('Message extraction failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown extraction error',
-      };
-    }
-  }
-
-  /**
-   * Complete round-trip test: embed message, re-encode, then extract message
-   */
-  async testRoundTripSteganography(
-    imageBuffer: Uint8Array,
-    message: string,
-    quality = 85
-  ): Promise<{
-    success: boolean;
-    error?: string;
-    originalMessage?: string;
-    extractedMessage?: string;
-    messagesMatch?: boolean;
-    modifiedJpeg?: Uint8Array;
-    stats?: {
-      originalSize: number;
-      modifiedSize: number;
-      coefficientsModified: number;
-      coefficientsRead: number;
-    };
-  }> {
-    try {
-      console.log('=== ROUND-TRIP STEGANOGRAPHY TEST ===');
-      console.log(`Testing with message: "${message}"`);
-
-      // Step 1: Embed message and re-encode
-      const embedResult = await this.embedMessageAndReencode(imageBuffer, message, quality);
-
-      if (!embedResult.success || !embedResult.modifiedJpeg) {
-        return {
-          success: false,
-          error: embedResult.error || 'Failed to embed message',
-        };
-      }
-
-      console.log(`Embedding completed: ${embedResult.modifiedJpeg.length} bytes`);
-
-      // Step 2: Extract message from the modified JPEG
-      const extractResult = await this.extractMessage(embedResult.modifiedJpeg, message.length);
-
-      if (!extractResult.success) {
-        return {
-          success: false,
-          error: extractResult.error || 'Failed to extract message',
-          modifiedJpeg: embedResult.modifiedJpeg,
-        };
-      }
-
-      // Step 3: Compare messages
-      const messagesMatch = extractResult.message === message;
-
-      console.log(`Original message: "${message}"`);
-      console.log(`Extracted message: "${extractResult.message}"`);
-      console.log(`Messages match: ${messagesMatch ? '✅ YES' : '❌ NO'}`);
-
-      return {
-        success: true,
-        originalMessage: message,
-        extractedMessage: extractResult.message,
-        messagesMatch,
-        modifiedJpeg: embedResult.modifiedJpeg,
-        stats: {
-          originalSize: imageBuffer.length,
-          modifiedSize: embedResult.modifiedJpeg.length,
-          coefficientsModified: embedResult.coefficientsModified || 0,
-          coefficientsRead: extractResult.coefficientsRead || 0,
-        },
-      };
-    } catch (error) {
-      console.error('Round-trip steganography test failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown round-trip error',
-      };
-    }
-  }
-
-  /**
-   * Complete end-to-end steganography: embed message and re-encode JPEG (LEGACY)
-   */
-  async embedMessageAndReencodeLegacy(
-    imageBuffer: Uint8Array,
-    message: string,
-    quality = 85
-  ): Promise<IJp3gForkEmbedResult> {
-    try {
-      console.log('=== END-TO-END STEGANOGRAPHY: EMBED & RE-ENCODE (LEGACY) ===');
-
-      // Step 1: Parse the original JPEG and extract DCT coefficients
-      const parseResult = await this.parseWithInternalAccess(imageBuffer);
-
-      if (!parseResult.success || !parseResult.internalDecoder) {
-        return {
-          success: false,
-          error: parseResult.error || 'Failed to parse original JPEG',
-        };
-      }
-
-      const decoder = parseResult.internalDecoder;
-      console.log(`Original JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
-
-      // Step 2: Embed message in DCT coefficients
-      const messageBytes = new TextEncoder().encode(message);
-      let coefficientsModified = 0;
-      let messageIndex = 0;
-      let bitIndex = 0;
-
-      // Process only the luminance component (Y) for simplicity
-      const yComponent = decoder.components[0];
-      if (!yComponent.dctBlocks) {
-        return {
-          success: false,
-          error: 'No DCT blocks found in luminance component',
-        };
-      }
-
-      console.log(`Embedding in ${yComponent.dctBlocks.length} × ${yComponent.dctBlocks[0].length} DCT blocks`);
-
-      // Embed message bits in AC coefficients
-      outerLoop: for (let blockRow = 0; blockRow < yComponent.dctBlocks.length; blockRow++) {
-        for (let blockCol = 0; blockCol < yComponent.dctBlocks[blockRow].length; blockCol++) {
-          const dctBlock = yComponent.dctBlocks[blockRow][blockCol];
-
-          if (!dctBlock || dctBlock.length !== 64) {
-            continue;
-          }
-
-          // Modify AC coefficients (skip DC at index 0)
-          for (let coefIndex = 1; coefIndex < 64 && messageIndex < messageBytes.length; coefIndex++) {
-            const coef = dctBlock[coefIndex];
-
-            // Only modify non-zero coefficients with sufficient magnitude
-            if (coef !== 0 && Math.abs(coef) >= 2) {
-              // Extract bit from message
-              const messageBit = (messageBytes[messageIndex] >> (7 - bitIndex)) & 1;
-
-              // Modify LSB
-              if (coef > 0) {
-                dctBlock[coefIndex] = (coef & ~1) | messageBit;
-              } else {
-                dctBlock[coefIndex] = -((Math.abs(coef) & ~1) | messageBit);
-              }
-
-              coefficientsModified++;
-              bitIndex++;
-
-              if (bitIndex >= 8) {
-                bitIndex = 0;
-                messageIndex++;
-                if (messageIndex >= messageBytes.length) {
-                  break outerLoop;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      console.log(
-        `✅ Embedded ${messageIndex} bytes (${messageIndex * 8} bits) in ${coefficientsModified} coefficients`
-      );
-
-      // Step 3: Re-encode the JPEG with modified coefficients
-      const encoder = new JPEGEncoder(quality);
-
-      // Prepare DCT data for encoder
-      const dctData = {
-        width: decoder.width,
-        height: decoder.height,
-        components: decoder.components.map((comp: DecoderComponent) => ({
-          dctBlocks: comp.dctBlocks,
-          blocksPerLine: comp.blocksPerLine,
-          blocksPerColumn: comp.blocksPerColumn,
-        })),
-      };
-
-      // Prepare original metadata
-      const originalMetadata = {
-        comments: decoder.comments || [],
-        exifBuffer: decoder.exifBuffer || null,
-      };
-
-      console.log('Re-encoding JPEG with modified DCT coefficients...');
-      const modifiedJpeg = encoder.encodeFromDCT(dctData, originalMetadata, quality);
-
-      console.log(`✅ Re-encoded JPEG: ${modifiedJpeg.length} bytes`);
-
-      return {
-        success: true,
-        modifiedJpeg: new Uint8Array(modifiedJpeg),
-        coefficientsModified,
-        blocks: yComponent.dctBlocks.length * yComponent.dctBlocks[0].length,
-      };
-    } catch (error) {
-      console.error('End-to-end steganography failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown embedding error',
-      };
-    }
-  }
-
-  /**
-   * Debug: Inspect the internal structure of our jp3g fork
+   * DEBUG: Inspect the internal structure of our jp3g fork
    */
   async debugInternalStructure(imageBuffer: Uint8Array): Promise<void> {
     try {

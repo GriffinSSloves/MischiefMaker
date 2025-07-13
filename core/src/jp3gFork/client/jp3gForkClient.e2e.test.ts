@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath, resolve } from 'url';
 import process from 'process';
-import { Jp3gForkClient } from './jp3gForkClient';
+import { EnhancedJp3gForkClient } from './EnhancedJp3gForkClient';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +41,7 @@ if (devImage) {
 const isLongTest = true;
 
 describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
-  const client = new Jp3gForkClient();
+  const client = new EnhancedJp3gForkClient(true); // Enable debug mode
   const outputDir = path.join(testDir, 'output');
 
   // Ensure output directory exists
@@ -73,30 +73,28 @@ describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
       console.log(`\n🧪 E2E Testing ${imageName} (${(imageBuffer.length / 1024).toFixed(1)} KB)`);
       console.log(`📝 Message: "${message}" (${message.length} chars)`);
 
-      // 2. Embed the message
-      const embedResult = await client.embedMessageAndReencode(imageBuffer, message);
+      // 2. Embed the message using clean interface
+      const embedResult = await client.embedMessage(imageBuffer, message, { quality: 85 });
       expect(embedResult.success).toBe(true);
-      expect(embedResult.modifiedJpeg).toBeInstanceOf(Uint8Array);
-      expect(embedResult.coefficientsModified ?? 0).toBeGreaterThan(0);
+      expect(embedResult.imageWithMessage).toBeDefined();
+      expect(embedResult.imageWithMessage!.data).toBeInstanceOf(Uint8Array);
+      expect(embedResult.stats?.coefficientsUsed ?? 0).toBeGreaterThan(0);
 
-      if (!embedResult.modifiedJpeg) {
+      if (!embedResult.imageWithMessage) {
         throw new Error('Modified JPEG is undefined');
       }
 
       // Save with descriptive filename
-      fs.writeFileSync(modifiedImagePath, embedResult.modifiedJpeg);
+      fs.writeFileSync(modifiedImagePath, embedResult.imageWithMessage.data);
       console.log(`💾 Modified JPEG saved: ${path.basename(modifiedImagePath)}`);
       console.log(
-        `📊 Size: ${imageBuffer.length} → ${embedResult.modifiedJpeg.length} bytes (${embedResult.coefficientsModified} coefficients modified)`
+        `📊 Size: ${imageBuffer.length} → ${embedResult.imageWithMessage.size} bytes (${embedResult.stats?.coefficientsUsed} coefficients modified)`
       );
 
-      // 3. Verify the modified image is valid
+      // 3. Verify the modified image is valid (use round-trip test)
       const modifiedImageBuffer = fs.readFileSync(modifiedImagePath);
-      const verifyResult = await client.parseWithInternalAccess(modifiedImageBuffer);
-      expect(verifyResult.success).toBe(true);
-      expect(verifyResult.error).toBeUndefined();
 
-      // 4. Extract and verify the message
+      // 4. Extract and verify the message using clean interface
       const extractResult = await client.extractMessage(modifiedImageBuffer, message.length);
       expect(extractResult.success).toBe(true);
       expect(extractResult.message).toBe(message);
@@ -123,25 +121,26 @@ describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
       const imageBuffer = fs.readFileSync(imagePath);
       const message = `Performance test for ${imageName}`;
 
-      // Parse timing
-      const parseStart = Date.now();
-      const parseResult = await client.parseWithInternalAccess(imageBuffer);
-      const parseTime = Date.now() - parseStart;
+      // Round-trip timing using clean interface
+      const roundTripStart = Date.now();
+      const roundTripResult = await client.testRoundTrip(imageBuffer, message, { quality: 85 });
+      const roundTripTime = Date.now() - roundTripStart;
 
-      expect(parseResult.success).toBe(true);
+      expect(roundTripResult.success).toBe(true);
+      expect(roundTripResult.messagesMatch).toBe(true);
 
-      // Embed timing
+      // Individual operation timing for detailed metrics
       const embedStart = Date.now();
-      const embedResult = await client.embedMessageAndReencode(imageBuffer, message);
+      const embedResult = await client.embedMessage(imageBuffer, message, { quality: 85 });
       const embedTime = Date.now() - embedStart;
 
       expect(embedResult.success).toBe(true);
 
       // Extract timing (if embed succeeded)
       let extractTime = 0;
-      if (embedResult.modifiedJpeg) {
+      if (embedResult.imageWithMessage) {
         const extractStart = Date.now();
-        const extractResult = await client.extractMessage(embedResult.modifiedJpeg, message.length);
+        const extractResult = await client.extractMessage(embedResult.imageWithMessage.data, message.length);
         extractTime = Date.now() - extractStart;
         expect(extractResult.success).toBe(true);
       }
@@ -149,13 +148,13 @@ describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
       performanceResults.push({
         imageName,
         imageSize: imageBuffer.length,
-        parseTime,
+        parseTime: roundTripTime, // Use round-trip time as parse time equivalent
         embedTime,
         extractTime,
-        coefficientsModified: embedResult.coefficientsModified ?? 0,
+        coefficientsModified: embedResult.stats?.coefficientsUsed ?? 0,
       });
 
-      console.log(`⚡ ${imageName}: Parse ${parseTime}ms, Embed ${embedTime}ms, Extract ${extractTime}ms`);
+      console.log(`⚡ ${imageName}: Round-trip ${roundTripTime}ms, Embed ${embedTime}ms, Extract ${extractTime}ms`);
     }
 
     // Performance assertions

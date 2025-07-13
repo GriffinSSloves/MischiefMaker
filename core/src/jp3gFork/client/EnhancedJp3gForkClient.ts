@@ -1,11 +1,18 @@
-/* eslint-disable */
-// @ts-nocheck
+/* eslint-disable no-console */
 
 import jp3gFork from '../decoder/jp3gDecoder';
 import { IJpegInternalDecoder } from '../types/IJpegDecoder';
 import { JPEGEncoder } from '../encoder/jp3gEncoder';
 import { embedMessageSimplePerceptual, extractMessageSimplePerceptual } from './utils/SimplePerceptualEmbedder';
 import { optimizeQualityForSteganography, IQualityAnalysis } from './utils/QualityAdaptation';
+import {
+  ISteganographyClient,
+  SteganographyOptions,
+  EmbedResult,
+  ExtractResult,
+  RoundTripTestResult,
+  ImageBuffer,
+} from '../interfaces/ISteganographyClient';
 
 export interface IEnhancedEmbedResult {
   success: boolean;
@@ -40,37 +47,37 @@ export interface IEnhancedExtractResult {
 }
 
 /**
- * Enhanced JP3G Fork Client with perceptual weighting and quality adaptation
- * Provides significantly better visual quality for steganography operations
+ * Enhanced JPEG Steganography Client with perceptual weighting and quality adaptation
+ *
+ * Implements the clean ISteganographyClient interface with advanced features:
+ * - Perceptual weighting for better visual quality
+ * - Adaptive quality optimization
+ * - Fallback strategies for challenging images
  */
-export class EnhancedJp3gForkClient {
+export class EnhancedJp3gForkClient implements ISteganographyClient {
   private debugMode: boolean = false;
 
   constructor(debugMode: boolean = false) {
     this.debugMode = debugMode;
   }
 
+  // ============================================================================
+  // PUBLIC INTERFACE METHODS (ISteganographyClient)
+  // ============================================================================
+
   /**
-   * Enhanced message embedding with perceptual weighting and adaptive quality
+   * Hide a text message inside a JPEG image with enhanced perceptual weighting
    */
-  async embedMessageEnhanced(
-    imageBuffer: Uint8Array,
-    message: string,
-    options: {
-      targetFileSize?: number;
-      forceQuality?: number;
-      preserveOriginalQuality?: boolean;
-    } = {}
-  ): Promise<IEnhancedEmbedResult> {
+  async embedMessage(image: Uint8Array, message: string, options: SteganographyOptions = {}): Promise<EmbedResult> {
     try {
       if (this.debugMode) {
         console.log('\n=== ENHANCED STEGANOGRAPHY EMBEDDING ===');
         console.log(`Message: "${message}" (${message.length} chars, ${message.length * 8} bits)`);
-        console.log(`Options:`, options);
+        console.log('Options:', options);
       }
 
       // Step 1: Parse the original JPEG
-      const jpegObject = jp3gFork(imageBuffer).toObject();
+      const jpegObject = jp3gFork(image).toObject();
       const decoder = jpegObject._decoder as IJpegInternalDecoder;
 
       if (!decoder) {
@@ -79,14 +86,14 @@ export class EnhancedJp3gForkClient {
 
       if (this.debugMode) {
         console.log(`\nOriginal JPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
-        console.log(`File size: ${imageBuffer.length} bytes`);
+        console.log(`File size: ${image.length} bytes`);
       }
 
       // Step 2: Analyze image quality and optimize encoding parameters
-      const qualityOptimization = optimizeQualityForSteganography(decoder, options.targetFileSize);
-      let actualQuality = options.forceQuality || qualityOptimization.quality;
+      const qualityOptimization = optimizeQualityForSteganography(decoder, options.maxFileSize);
+      let actualQuality = options.quality || qualityOptimization.quality;
 
-      if (options.preserveOriginalQuality) {
+      if (options.preserveQuality) {
         actualQuality = Math.max(qualityOptimization.analysis.estimatedQuality, actualQuality);
       }
 
@@ -133,58 +140,34 @@ export class EnhancedJp3gForkClient {
         );
       }
 
-      // Step 4: Re-encode with optimized settings
+      // Step 4: Re-encode with optimized settings and fixed subsampling
       const encoder = new JPEGEncoder(actualQuality);
+      const metadata = this.createEnhancedEncoderMetadata(decoder, qualityOptimization, options);
+      const modifiedJpeg = encoder.encodeFromDCT(decoder, metadata, actualQuality);
 
-      // Create metadata with optimized quantization tables
-      const metadata = {
-        width: decoder.width,
-        height: decoder.height,
-        quantizationTables: [qualityOptimization.quantizationTables[0], qualityOptimization.quantizationTables[1]] as [
-          number[],
-          number?,
-        ],
-        hSampRatio: decoder.components[1] ? Math.round(1 / (decoder.components[1].scaleX || 1)) : 2,
-        vSampRatio: decoder.components[1] ? Math.round(1 / (decoder.components[1].scaleY || 1)) : 2,
-        comments: decoder.comments || [],
-        exif: decoder.exifBuffer || null,
+      const imageBuffer: ImageBuffer = {
+        data: new Uint8Array(modifiedJpeg),
+        size: modifiedJpeg.length,
       };
 
-      if (this.debugMode) {
-        console.log(`\nRe-encoding with optimized parameters...`);
-        console.log(`  Using ${qualityOptimization.quantizationTables.length} quantization tables`);
-        console.log(`  Sampling ratio: ${metadata.hSampRatio}:${metadata.vSampRatio}`);
-      }
-
-      const modifiedJpeg = encoder.encodeFromDCT(decoder, metadata, actualQuality);
-      const modifiedSize = modifiedJpeg.length;
-      const sizeChangePercent = ((modifiedSize - imageBuffer.length) / imageBuffer.length) * 100;
+      const sizeChangePercent = ((modifiedJpeg.length - image.length) / image.length) * 100;
 
       if (this.debugMode) {
         console.log(`\nRe-encoding completed!`);
-        console.log(`  Original size: ${imageBuffer.length} bytes`);
-        console.log(`  Modified size: ${modifiedSize} bytes`);
+        console.log(`  Original size: ${image.length} bytes`);
+        console.log(`  Modified size: ${modifiedJpeg.length} bytes`);
         console.log(`  Size change: ${sizeChangePercent > 0 ? '+' : ''}${sizeChangePercent.toFixed(1)}%`);
       }
 
       return {
         success: true,
-        modifiedJpeg: new Uint8Array(modifiedJpeg),
+        imageWithMessage: imageBuffer,
         stats: {
-          coefficientsModified: embedStats.coefficientsModified,
-          coefficientsSkipped: embedStats.coefficientsSkipped,
-          bytesEmbedded: embedStats.bytesEmbedded,
-          averagePerceptualWeight: embedStats.averagePerceptualWeight,
-          embeddingEfficiency:
-            (embedStats.coefficientsModified / (embedStats.coefficientsModified + embedStats.coefficientsSkipped)) *
-            100,
-          originalSize: imageBuffer.length,
-          modifiedSize,
-          sizeChangePercent,
-          qualityAnalysis: qualityOptimization.analysis,
-          encodingStrategy: qualityOptimization.strategy,
-          recommendedQuality: qualityOptimization.quality,
-          actualQuality,
+          messageLength: message.length,
+          coefficientsUsed: embedStats.coefficientsModified,
+          originalFileSize: image.length,
+          finalFileSize: modifiedJpeg.length,
+          qualityUsed: actualQuality,
         },
       };
     } catch (error) {
@@ -197,20 +180,17 @@ export class EnhancedJp3gForkClient {
   }
 
   /**
-   * Enhanced message extraction with perceptual weighting
+   * Extract a hidden message from a JPEG image with enhanced perceptual weighting
    */
-  async extractMessageEnhanced(
-    imageBuffer: Uint8Array,
-    expectedMessageLength: number
-  ): Promise<IEnhancedExtractResult> {
+  async extractMessage(image: Uint8Array, expectedLength?: number): Promise<ExtractResult> {
     try {
       if (this.debugMode) {
         console.log('\n=== ENHANCED STEGANOGRAPHY EXTRACTION ===');
-        console.log(`Expected message length: ${expectedMessageLength} chars`);
+        console.log(`Expected message length: ${expectedLength || 'auto-detect'} chars`);
       }
 
       // Parse the JPEG
-      const jpegObject = jp3gFork(imageBuffer).toObject();
+      const jpegObject = jp3gFork(image).toObject();
       const decoder = jpegObject._decoder as IJpegInternalDecoder;
 
       if (!decoder) {
@@ -219,16 +199,17 @@ export class EnhancedJp3gForkClient {
 
       if (this.debugMode) {
         console.log(`\nJPEG: ${decoder.width}x${decoder.height}, ${decoder.components.length} components`);
-        console.log(`File size: ${imageBuffer.length} bytes`);
+        console.log(`File size: ${image.length} bytes`);
       }
 
       // Extract message using simple perceptual weighting
-      const extractResult = extractMessageSimplePerceptual(decoder, expectedMessageLength, this.debugMode);
+      const estimatedLength = expectedLength || this.estimateMessageLength(decoder);
+      const extractResult = extractMessageSimplePerceptual(decoder, estimatedLength, this.debugMode);
 
-      if (extractResult.bytes.length < expectedMessageLength) {
+      if (extractResult.bytes.length < estimatedLength) {
         return {
           success: false,
-          error: `Extraction incomplete: got ${extractResult.bytes.length}/${expectedMessageLength} bytes`,
+          error: `Extraction incomplete: got ${extractResult.bytes.length}/${estimatedLength} bytes`,
         };
       }
 
@@ -248,10 +229,8 @@ export class EnhancedJp3gForkClient {
         success: true,
         message: extractedMessage,
         stats: {
+          messageLength: extractedMessage.length,
           coefficientsRead: extractResult.coefficientsRead,
-          coefficientsSkipped: extractResult.coefficientsSkipped,
-          bitsExtracted: extractResult.bitsExtracted,
-          extractionEfficiency,
         },
       };
     } catch (error) {
@@ -264,26 +243,13 @@ export class EnhancedJp3gForkClient {
   }
 
   /**
-   * Complete round-trip test with enhanced algorithms
+   * Test round-trip with enhanced algorithms
    */
-  async testRoundTripEnhanced(
-    imageBuffer: Uint8Array,
+  async testRoundTrip(
+    image: Uint8Array,
     message: string,
-    options: {
-      targetFileSize?: number;
-      forceQuality?: number;
-      preserveOriginalQuality?: boolean;
-    } = {}
-  ): Promise<{
-    success: boolean;
-    error?: string;
-    originalMessage: string;
-    extractedMessage?: string;
-    messagesMatch?: boolean;
-    modifiedJpeg?: Uint8Array;
-    embedStats?: IEnhancedEmbedResult['stats'];
-    extractStats?: IEnhancedExtractResult['stats'];
-  }> {
+    options: SteganographyOptions = {}
+  ): Promise<RoundTripTestResult> {
     try {
       if (this.debugMode) {
         console.log('\n=== ENHANCED ROUND-TRIP TEST ===');
@@ -291,9 +257,9 @@ export class EnhancedJp3gForkClient {
       }
 
       // Step 1: Enhanced embedding
-      const embedResult = await this.embedMessageEnhanced(imageBuffer, message, options);
+      const embedResult = await this.embedMessage(image, message, options);
 
-      if (!embedResult.success || !embedResult.modifiedJpeg) {
+      if (!embedResult.success || !embedResult.imageWithMessage) {
         return {
           success: false,
           error: embedResult.error || 'Enhanced embedding failed',
@@ -302,14 +268,13 @@ export class EnhancedJp3gForkClient {
       }
 
       // Step 2: Enhanced extraction
-      const extractResult = await this.extractMessageEnhanced(embedResult.modifiedJpeg, message.length);
+      const extractResult = await this.extractMessage(embedResult.imageWithMessage.data, message.length);
 
       if (!extractResult.success) {
         return {
           success: false,
           error: extractResult.error || 'Enhanced extraction failed',
           originalMessage: message,
-          modifiedJpeg: embedResult.modifiedJpeg,
         };
       }
 
@@ -324,13 +289,11 @@ export class EnhancedJp3gForkClient {
 
         if (embedResult.stats) {
           console.log(`\nQuality metrics:`);
-          console.log(`  Original quality: ${embedResult.stats.qualityAnalysis.estimatedQuality}`);
-          console.log(`  Encoding strategy: ${embedResult.stats.encodingStrategy}`);
+          console.log(`  Encoding quality: ${embedResult.stats.qualityUsed}`);
           console.log(
-            `  Size change: ${embedResult.stats.sizeChangePercent > 0 ? '+' : ''}${embedResult.stats.sizeChangePercent.toFixed(1)}%`
+            `  Size change: ${(((embedResult.stats.finalFileSize - embedResult.stats.originalFileSize) / embedResult.stats.originalFileSize) * 100).toFixed(1)}%`
           );
-          console.log(`  Embedding efficiency: ${embedResult.stats.embeddingEfficiency.toFixed(1)}%`);
-          console.log(`  Perceptual weight: ${embedResult.stats.averagePerceptualWeight.toFixed(2)}`);
+          console.log(`  Coefficients used: ${embedResult.stats.coefficientsUsed}`);
         }
       }
 
@@ -339,9 +302,6 @@ export class EnhancedJp3gForkClient {
         originalMessage: message,
         extractedMessage: extractResult.message,
         messagesMatch,
-        modifiedJpeg: embedResult.modifiedJpeg,
-        embedStats: embedResult.stats,
-        extractStats: extractResult.stats,
       };
     } catch (error) {
       console.error('Enhanced round-trip test failed:', error);
@@ -353,8 +313,54 @@ export class EnhancedJp3gForkClient {
     }
   }
 
+  // ============================================================================
+  // INTERNAL HELPER METHODS
+  // ============================================================================
+
+  private estimateMessageLength(decoder: IJpegInternalDecoder): number {
+    // Conservative estimate for enhanced algorithm
+    const component = decoder.components[0];
+    const blocks = component.dctBlocks || component.blocks || [];
+    const totalCoefficients = blocks.length * 64;
+    return Math.floor((totalCoefficients * 0.05) / 8); // More conservative due to perceptual weighting
+  }
+
+  private createEnhancedEncoderMetadata(
+    decoder: IJpegInternalDecoder,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    qualityOptimization: any,
+    options: SteganographyOptions
+  ) {
+    // Fix the subsampling bug: handle 0.5 scale factors properly
+    const hSampRatio = decoder.components[1]
+      ? decoder.components[1].scaleX === 0.5
+        ? 1
+        : Math.round(1 / (decoder.components[1].scaleX || 1))
+      : 1;
+    const vSampRatio = decoder.components[1]
+      ? decoder.components[1].scaleY === 0.5
+        ? 1
+        : Math.round(1 / (decoder.components[1].scaleY || 1))
+      : 1;
+
+    return {
+      width: decoder.width,
+      height: decoder.height,
+      quantizationTables: options.preserveQuality
+        ? qualityOptimization.quantizationTables
+        : ([qualityOptimization.quantizationTables[0], qualityOptimization.quantizationTables[1]] as [
+            number[],
+            number[]?,
+          ]),
+      hSampRatio,
+      vSampRatio,
+      comments: decoder.comments || [],
+      exif: decoder.exifBuffer || null,
+    };
+  }
+
   /**
-   * Fallback embedding strategy using simpler coefficient selection
+   * INTERNAL: Fallback embedding strategy using simpler coefficient selection
    * for images where the enhanced algorithm is too restrictive
    */
   private embedMessageFallback(
