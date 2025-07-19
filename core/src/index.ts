@@ -5,6 +5,7 @@ export type { ISteganographyEngine } from './interfaces/ISteganographyEngine';
 export type { IEncoder, ISimpleLSBEncoder, ITripleRedundancyEncoder, IAdaptiveLSBEncoder } from './interfaces/IEncoder';
 export type { IDecoder, ISimpleLSBDecoder, ITripleRedundancyDecoder, IAdaptiveLSBDecoder } from './interfaces/IDecoder';
 export type { ICapacityCalculator } from './interfaces/ICapacityCalculator';
+export type { IBufferLike } from './interfaces/IBufferLike';
 
 // DCT interfaces - direct imports
 export type { IDCTEncoder } from './interfaces/IDCTEncoder';

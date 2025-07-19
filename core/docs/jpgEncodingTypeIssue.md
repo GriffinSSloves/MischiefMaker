@@ -45,7 +45,7 @@ Through comprehensive testing of our image dataset, we discovered a clear correl
 ```
 Original image subsampling:
   Y component: scaleX=1, scaleY=1 (full resolution)
-  Cb component: scaleX=0.5, scaleY=0.5 (half resolution)  
+  Cb component: scaleX=0.5, scaleY=0.5 (half resolution)
   Cr component: scaleX=0.5, scaleY=0.5 (half resolution)
 ```
 
@@ -57,7 +57,7 @@ File: `core/src/jp3gFork/encoder/utils/jpegHeaderWriters.ts` (lines 78, 81, 84)
 
 ```typescript
 // CURRENT HARDCODED VALUES:
-writer.writeByte(0x11); // Y component 
+writer.writeByte(0x11); // Y component
 writer.writeByte(0x11); // U component - PROBLEM: should be 0x22 for 4:2:0
 writer.writeByte(0x11); // V component - PROBLEM: should be 0x22 for 4:2:0
 ```
@@ -70,7 +70,8 @@ File: `core/src/jp3gFork/encoder/jp3gEncoder.ts` (lines 524-548)
 
 The `upsampleComponent` function forces all chroma components to match luma resolution, converting 4:2:0 → 4:4:4. Combined with the hardcoded SOF0 header, this changes the color representation.
 
-**Effect**: 
+**Effect**:
+
 - Original 4:2:0 images lose their proper chroma subsampling
 - Visual artifacts appear as "grey filter" effect
 - File size increases significantly (17.4% in test case)
@@ -178,7 +179,7 @@ This approach provides immediate resolution while maintaining compatibility and 
 ```bash
 Original image subsampling:
   Y component: scaleX=1, scaleY=1 (full resolution)
-  Cb component: scaleX=0.5, scaleY=0.5 (half resolution)  
+  Cb component: scaleX=0.5, scaleY=0.5 (half resolution)
   Cr component: scaleX=0.5, scaleY=0.5 (half resolution)
 
 Modified image results:
@@ -191,7 +192,7 @@ Modified image results:
 The grey filter issue is definitively caused by **subsampling format conversion**:
 
 1. **Input**: 4:2:0 subsampling (chroma at half resolution)
-2. **Processing**: Forced conversion to 4:4:4 via hardcoded SOF0 header (`0x11`) 
+2. **Processing**: Forced conversion to 4:4:4 via hardcoded SOF0 header (`0x11`)
 3. **Output**: 4:4:4 subsampling with degraded color representation
 4. **Visual Effect**: Grey filter appearance due to chroma information loss
 

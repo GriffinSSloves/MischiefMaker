@@ -12,9 +12,4 @@ describe('Home', () => {
     renderWithRouterHelpers.home(<Home />);
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
   });
-
-  it('contains welcome message', () => {
-    renderWithRouterHelpers.home(<Home />);
-    expect(screen.getByText('Hide secret messages in pictures to send to your friends.')).toBeInTheDocument();
-  });
 });

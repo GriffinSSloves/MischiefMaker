@@ -79,7 +79,7 @@ describe('AppRouter', () => {
 
     const rootRoute = routes[0];
     expect(rootRoute.path).toBe('/');
-    expect(rootRoute.children).toHaveLength(3);
+    expect(rootRoute.children).toHaveLength(4);
 
     const [homeRoute, encodeRoute, decodeRoute] = rootRoute.children!;
 

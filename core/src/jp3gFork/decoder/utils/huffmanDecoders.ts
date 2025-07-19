@@ -60,7 +60,7 @@ export function createHuffmanDecoders(ctx: IHuffmanContext) {
     zz[0] = component.pred = (component.pred ?? 0) + diff;
   }
 
-  function decodeDCSuccessive(component: IScanComponent, zz: Int32Array): void {
+  function decodeDCSuccessive(_component: IScanComponent, zz: Int32Array): void {
     const bit = readBit();
     if (bit !== null) {
       zz[0] |= bit << successive;

@@ -40,7 +40,7 @@ Basic GUI blocking jpeg encoder
 // – Steganography extensions, TypeScript migration scaffolding and API tweaks
 // ---------------------------------------------------------------------------
 
-import { Buffer } from 'buffer';
+import type { IBufferLike } from '../../interfaces/IBufferLike';
 import { buildCategoryAndBitcode } from './utils/bitcodeUtils';
 import { BitWriter, BitSpec } from './utils/BitWriter';
 import { buildRgbYuvLookupTable } from './utils/colorTables';
@@ -79,7 +79,7 @@ interface IDecoderComponent {
   scaleY?: number;
 }
 
-function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) {
+function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50, bufferAdapter?: IBufferLike) {
   // -------------------------------------------------------------------------
   // Internal state (typed)
   // -------------------------------------------------------------------------
@@ -398,10 +398,13 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
 
     writeWord(0xffd9); //EOI
 
+    if (bufferAdapter) {
+      return bufferAdapter.from(bitWriter.getData());
+    }
     if (typeof module === 'undefined') {
       return new Uint8Array(bitWriter.getData());
     }
-    return Buffer.from(bitWriter.getData());
+    return new Uint8Array(bitWriter.getData());
   };
 
   // FORK MODIFICATION: Encode from DCT coefficients for steganography
@@ -409,7 +412,7 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
     blocks: QuantizedComponents | { components: unknown[] },
     metadataInput?: Partial<IEncodeMetadata>,
     quality?: number
-  ): Uint8Array | Buffer => {
+  ): Uint8Array => {
     // Normalize parameters so that the encoder works whether we receive raw
     // coefficient arrays or a full decoder-like object.
     // ------------------------------------------------------------------
@@ -678,24 +681,24 @@ function LegacyJPEGEncoder(this: Record<string, unknown>, quality: number = 50) 
 // ---------------------------------------------------------------------------
 
 type LegacyImpl = {
-  encode: (image: IRgbaImage, quality?: number) => Uint8Array | Buffer;
+  encode: (image: IRgbaImage, quality?: number) => Uint8Array;
   encodeFromDCT: (
     blocks: QuantizedComponents | { components: unknown[] },
     metadataInput?: Partial<IEncodeMetadata>,
     quality?: number
-  ) => Uint8Array | Buffer;
+  ) => Uint8Array;
 };
 
 export class JPEGEncoder implements IJpegEncoder {
   private readonly impl: LegacyImpl;
 
-  constructor(quality: number = 50) {
+  constructor(quality: number = 50, bufferAdapter?: IBufferLike) {
     // Cast constructor to satisfy TS without using `any`
-    const LegacyCtor = LegacyJPEGEncoder as unknown as new (quality: number) => LegacyImpl;
-    this.impl = new LegacyCtor(quality);
+    const LegacyCtor = LegacyJPEGEncoder as unknown as new (quality: number, bufferAdapter?: IBufferLike) => LegacyImpl;
+    this.impl = new LegacyCtor(quality, bufferAdapter);
   }
 
-  encode(image: IRgbaImage, quality?: number): Uint8Array | Buffer {
+  encode(image: IRgbaImage, quality?: number): Uint8Array {
     return this.impl.encode(image, quality);
   }
 
@@ -703,7 +706,7 @@ export class JPEGEncoder implements IJpegEncoder {
     blocks: QuantizedComponents | { components: unknown[] },
     metadataInput?: Partial<IEncodeMetadata>,
     quality?: number
-  ): Uint8Array | Buffer {
+  ): Uint8Array {
     return this.impl.encodeFromDCT(blocks, metadataInput, quality);
   }
 }

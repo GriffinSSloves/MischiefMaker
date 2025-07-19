@@ -3,12 +3,13 @@ import { readFileSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { EnhancedJp3gForkClient } from './EnhancedJp3gForkClient';
+import { nodeBufferAdapter } from '../../utils/NodeBufferAdapter';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const testDir = resolve(__dirname, '../../../tests');
 
 describe.skip('Enhanced Client Debug', () => {
-  const enhancedClient = new EnhancedJp3gForkClient(true);
+  const enhancedClient = new EnhancedJp3gForkClient({ bufferAdapter: nodeBufferAdapter, debugMode: true });
 
   it('should debug enhanced client with BlackShoe.jpeg', async () => {
     const imagePath = join(testDir, 'images', 'BlackShoe.jpeg');

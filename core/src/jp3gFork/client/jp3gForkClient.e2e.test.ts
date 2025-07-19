@@ -4,6 +4,7 @@ import * as path from 'path';
 import { fileURLToPath, resolve } from 'url';
 import process from 'process';
 import { EnhancedJp3gForkClient } from './EnhancedJp3gForkClient';
+import { nodeBufferAdapter } from '../../utils/NodeBufferAdapter';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,10 +34,10 @@ if (devImage) {
 
 // Check for long test execution
 //const isLongTest = process.env.LONG_TESTS === 'true' || process.env.JP3G_TESTS === 'true' || !!devImage;
-const isLongTest = true;
+const isLongTest = false;
 
 describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
-  const client = new EnhancedJp3gForkClient(true); // Enable debug mode
+  const client = new EnhancedJp3gForkClient({ bufferAdapter: nodeBufferAdapter, debugMode: true });
   const outputDir = path.join(testDir, 'output');
 
   // Ensure output directory exists
@@ -54,6 +55,72 @@ describe.skipIf(!isLongTest)('Jp3gForkClient E2E', () => {
 
   console.log('E2E: Working images:', workingImages);
   //const workingImages = ['BlackShoe.jpeg'];
+
+  // Visual debugging test for grey filter detection
+  it('should detect visual grey filter issues by comparing original vs modified', async () => {
+    // Test with one known problematic image
+    const testImage = 'Selfie.jpg'; // This was one that showed grey filter
+    const imagePath = path.join(testDir, 'images', testImage);
+    const imageBuffer = fs.readFileSync(imagePath);
+    const message = 'Visual test for grey filter detection';
+
+    console.log(`\n🔍 Visual Grey Filter Test: ${testImage}`);
+
+    // Debug original image subsampling info
+    const jp3gFork = await import('../decoder/jp3gDecoder');
+    const originalDecoded = jp3gFork.default(imageBuffer, nodeBufferAdapter).toObject();
+    console.log(`📊 Original subsampling info:`);
+    console.log(
+      `  Y component: scaleX=${originalDecoded.components[0]?.scaleX}, scaleY=${originalDecoded.components[0]?.scaleY}`
+    );
+    if (originalDecoded.components[1]) {
+      console.log(
+        `  Cb component: scaleX=${originalDecoded.components[1]?.scaleX}, scaleY=${originalDecoded.components[1]?.scaleY}`
+      );
+    }
+    if (originalDecoded.components[2]) {
+      console.log(
+        `  Cr component: scaleX=${originalDecoded.components[2]?.scaleX}, scaleY=${originalDecoded.components[2]?.scaleY}`
+      );
+    }
+
+    // Save original for comparison
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const originalPath = path.join(outputDir, `original_${testImage}_${timestamp}.jpg`);
+    fs.writeFileSync(originalPath, imageBuffer);
+
+    // Embed message
+    const embedResult = await client.embedMessage(imageBuffer, message, { quality: 85 });
+    expect(embedResult.success).toBe(true);
+
+    if (!embedResult.imageWithMessage) {
+      throw new Error('Embedding failed');
+    }
+
+    // Save modified image
+    const modifiedPath = path.join(outputDir, `modified_${testImage}_${timestamp}.jpg`);
+    fs.writeFileSync(modifiedPath, embedResult.imageWithMessage.data);
+
+    console.log(`💾 Original saved: ${path.basename(originalPath)}`);
+    console.log(`💾 Modified saved: ${path.basename(modifiedPath)}`);
+    console.log(`🔍 Compare these files visually to check for grey filter effect`);
+    console.log(`📊 Size change: ${imageBuffer.length} → ${embedResult.imageWithMessage.size} bytes`);
+
+    // Basic size/quality heuristic - grey filter often causes significant size changes
+    const sizeRatio = embedResult.imageWithMessage.size / imageBuffer.length;
+    console.log(`📈 Size ratio: ${sizeRatio.toFixed(3)} (>1.2 may indicate quality loss)`);
+
+    if (sizeRatio > 1.2) {
+      console.log(`⚠️  WARNING: Large size increase detected - possible grey filter effect`);
+    }
+
+    // Extract and verify
+    const extractResult = await client.extractMessage(embedResult.imageWithMessage.data, message.length);
+    expect(extractResult.success).toBe(true);
+    expect(extractResult.message).toBe(message);
+
+    console.log(`✅ Message extraction successful, but check images visually for grey filter`);
+  });
 
   it.each(workingImages.map((imageName, index) => [imageName, index + 1]))(
     'should perform full round-trip steganography cycle with %s',

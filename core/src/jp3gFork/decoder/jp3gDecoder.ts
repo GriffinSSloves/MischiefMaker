@@ -53,7 +53,7 @@ import {
   type Component as ColorComponent,
 } from './utils/colorSpaceConverter';
 import { copyToImageData as copyToImageDataUtil } from './utils/imageDataBuilder';
-import { Buffer } from 'buffer';
+import type { IBufferLike } from '../../interfaces/IBufferLike';
 
 // Type definitions for JPEG decoder
 interface DecoderOptions {
@@ -93,7 +93,7 @@ interface DecodedImage {
   width: number;
   height: number;
   exifBuffer?: Uint8Array;
-  data: Uint8Array | Buffer;
+  data: Uint8Array;
   comments?: string[];
 }
 
@@ -783,7 +783,7 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
       width: decoder.width,
       height: decoder.height,
       exifBuffer: decoder.exifBuffer,
-      data: opts.useTArray ? new Uint8Array(bytesNeeded) : Buffer.alloc(bytesNeeded),
+      data: new Uint8Array(bytesNeeded),
     };
     if (decoder.comments.length > 0) {
       image.comments = decoder.comments;
@@ -794,9 +794,7 @@ function decode(jpegData: ArrayLike<number> | ArrayBuffer, userOpts: Partial<Dec
     }
 
     if (err instanceof ReferenceError) {
-      if (err.message === 'Buffer is not defined') {
-        throw new Error('Buffer is not globally defined in this environment. ' + 'Consider setting useTArray to true');
-      }
+      // No longer check for Buffer since we use platform-agnostic adapters
     }
     throw err;
   }
@@ -816,7 +814,10 @@ export { JpegImage, decode };
 export type { JpegDecoder, DecoderComponent, DecoderOptions, DecodedImage };
 
 // Create a default export that matches jp3g's API
-export default function jp3gFork(data: Uint8Array): {
+export default function jp3gFork(
+  data: Uint8Array,
+  _bufferAdapter: IBufferLike
+): {
   toObject(): {
     width: number;
     height: number;

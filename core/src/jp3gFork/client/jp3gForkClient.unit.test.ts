@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EnhancedJp3gForkClient } from './EnhancedJp3gForkClient';
+import { nodeBufferAdapter } from '../../utils/NodeBufferAdapter';
 
 describe('Jp3gForkClient Unit Tests', () => {
   let client: EnhancedJp3gForkClient;
 
   beforeEach(() => {
-    client = new EnhancedJp3gForkClient(false); // Disable debug mode for unit tests
+    client = new EnhancedJp3gForkClient({ bufferAdapter: nodeBufferAdapter, debugMode: false });
   });
 
   describe('constructor', () => {

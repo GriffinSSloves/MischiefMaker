@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { Buffer } from 'buffer';
 import process from 'process';
 import { EnhancedJp3gForkClient } from './EnhancedJp3gForkClient';
+import { nodeBufferAdapter } from '../../utils/NodeBufferAdapter';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const testDir = resolve(__dirname, '../../../tests');
@@ -44,7 +45,7 @@ const testMessage = 'Hello, this is a test message!';
 const isLongTest = true;
 
 describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
-  const client = new EnhancedJp3gForkClient(true); // Enable debug mode
+  const client = new EnhancedJp3gForkClient({ bufferAdapter: nodeBufferAdapter, debugMode: true });
 
   describe.each(testImages)('Testing %s', imageName => {
     let imageBuffer: Uint8Array;
@@ -108,7 +109,7 @@ describe.skipIf(!isLongTest)('Jp3gForkClient Smoke Tests', () => {
 
 // Helper function to run tests for a specific image using clean interface
 export function testSingleImageJp3g(imageName: string) {
-  const client = new EnhancedJp3gForkClient(true); // Enable debug mode
+  const client = new EnhancedJp3gForkClient({ bufferAdapter: nodeBufferAdapter, debugMode: true });
   const imagePath = join(testDir, 'images', imageName);
 
   try {

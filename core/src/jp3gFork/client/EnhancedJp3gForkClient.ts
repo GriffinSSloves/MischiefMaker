@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 
 import jp3gFork from '../decoder/jp3gDecoder';
+import type { IBufferLike } from '../../interfaces/IBufferLike';
 import { IJpegInternalDecoder } from '../types/IJpegDecoder';
 import { JPEGEncoder } from '../encoder/jp3gEncoder';
 import { embedMessageSimplePerceptual, extractMessageSimplePerceptual } from './utils/SimplePerceptualEmbedder';
@@ -54,11 +55,18 @@ export interface IEnhancedExtractResult {
  * - Adaptive quality optimization
  * - Fallback strategies for challenging images
  */
+export type EnhancedJp3gForkClientOptions = {
+  bufferAdapter: IBufferLike;
+  debugMode: boolean;
+};
+
 export class EnhancedJp3gForkClient implements ISteganographyClient {
   private debugMode: boolean = false;
+  private bufferAdapter: IBufferLike;
 
-  constructor(debugMode: boolean = false) {
-    this.debugMode = debugMode;
+  constructor(options: EnhancedJp3gForkClientOptions) {
+    this.bufferAdapter = options.bufferAdapter;
+    this.debugMode = options.debugMode;
   }
 
   // ============================================================================
@@ -77,7 +85,7 @@ export class EnhancedJp3gForkClient implements ISteganographyClient {
       }
 
       // Step 1: Parse the original JPEG
-      const jpegObject = jp3gFork(image).toObject();
+      const jpegObject = jp3gFork(image, this.bufferAdapter).toObject();
       const decoder = jpegObject._decoder as IJpegInternalDecoder;
 
       if (!decoder) {
@@ -141,7 +149,7 @@ export class EnhancedJp3gForkClient implements ISteganographyClient {
       }
 
       // Step 4: Re-encode with optimized settings and fixed subsampling
-      const encoder = new JPEGEncoder(actualQuality);
+      const encoder = new JPEGEncoder(actualQuality, this.bufferAdapter);
       const metadata = this.createEnhancedEncoderMetadata(decoder, qualityOptimization, options);
       const modifiedJpeg = encoder.encodeFromDCT(decoder, metadata, actualQuality);
 
@@ -190,7 +198,7 @@ export class EnhancedJp3gForkClient implements ISteganographyClient {
       }
 
       // Parse the JPEG
-      const jpegObject = jp3gFork(image).toObject();
+      const jpegObject = jp3gFork(image, this.bufferAdapter).toObject();
       const decoder = jpegObject._decoder as IJpegInternalDecoder;
 
       if (!decoder) {
@@ -331,17 +339,11 @@ export class EnhancedJp3gForkClient implements ISteganographyClient {
     qualityOptimization: any,
     options: SteganographyOptions
   ) {
-    // Fix the subsampling bug: handle 0.5 scale factors properly
-    const hSampRatio = decoder.components[1]
-      ? decoder.components[1].scaleX === 0.5
-        ? 1
-        : Math.round(1 / (decoder.components[1].scaleX || 1))
-      : 1;
-    const vSampRatio = decoder.components[1]
-      ? decoder.components[1].scaleY === 0.5
-        ? 1
-        : Math.round(1 / (decoder.components[1].scaleY || 1))
-      : 1;
+    // Calculate proper subsampling ratios:
+    // - scaleX/Y = 1.0 means chroma has same resolution as luma (1:1 subsampling)
+    // - scaleX/Y = 0.5 means chroma has half resolution of luma (2:1 subsampling)
+    const hSampRatio = decoder.components[1] ? Math.round(1 / (decoder.components[1].scaleX || 1)) : 1;
+    const vSampRatio = decoder.components[1] ? Math.round(1 / (decoder.components[1].scaleY || 1)) : 1;
 
     return {
       width: decoder.width,

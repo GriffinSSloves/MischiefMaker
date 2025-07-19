@@ -4,6 +4,7 @@ import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { describe, it } from 'vitest';
 import jp3gFork from '../decoder/jp3gDecoder';
+import { nodeBufferAdapter } from '../../utils/NodeBufferAdapter';
 import type { IJpegInternalDecoder, IJpegDecoderComponent } from '../types/IJpegDecoder';
 
 interface JpegMetadata {
@@ -101,7 +102,7 @@ describe.skip('JPEG Metadata Analysis for Format Debugging', () => {
 
       try {
         const imageBuffer = readFileSync(filePath);
-        const decodedResult = jp3gFork(imageBuffer);
+        const decodedResult = jp3gFork(imageBuffer, nodeBufferAdapter);
         const decoded = decodedResult.toObject();
         const metadata = analyzeJpegMetadata(filename, imageBuffer, decoded);
         metadataResults.push(metadata);
@@ -161,7 +162,7 @@ describe.skip('JPEG Metadata Analysis for Format Debugging', () => {
 
         try {
           const imageBuffer = readFileSync(filePath);
-          const decodedResult = jp3gFork(imageBuffer);
+          const decodedResult = jp3gFork(imageBuffer, nodeBufferAdapter);
           const decoded = decodedResult.toObject();
           const analysis = analyzeGreyFilterRisk(filename, decoded);
           greyFilterAnalysis.push({ ...analysis, category: label });

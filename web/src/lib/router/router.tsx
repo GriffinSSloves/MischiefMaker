@@ -6,6 +6,7 @@ import Layout from '@/components/layouts/Layout/Layout';
 const Home = lazy(() => import('@/pages/Home/Home'));
 const Encode = lazy(() => import('@/pages/Encode/Encode'));
 const Decode = lazy(() => import('@/pages/Decode/Decode'));
+const PreProcessing = lazy(() => import('@/pages/PreProcessing'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -42,6 +43,10 @@ export const AppRouter = createBrowserRouter([
       {
         path: 'decode',
         element: <LazyRoute Component={Decode} />,
+      },
+      {
+        path: 'preprocessing',
+        element: <LazyRoute Component={PreProcessing} />,
       },
     ],
     // You can add an error element here when you create an error page
